@@ -948,6 +948,7 @@ end
 function _G.TS_SetHeroPriority(priority, target, enemyTeam)
 	local index = GetGameHeroIndex(target)
 	if (index) then
+		index = index % GameEnemyCount + 1
 		local oldPriority = GameHeroes[index].priority
 		if ((oldPriority == nil) or (oldPriority == priority)) then return end
 		for i = 1, #GameHeroes do
