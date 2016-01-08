@@ -275,7 +275,7 @@ end
 function InitializeGameHeroes()
 	for i = 1, heroManager.iCount do
 		local hero = heroManager:getHero(i)
-		if (hero and hero.valid) then
+		if (hero and hero.valid (hero.team ~= myHero.team)) then
 			GameEnemyCount = GameEnemyCount + 1
 			GameHeroes[#GameHeroes + 1] = {
 				hero = hero,
