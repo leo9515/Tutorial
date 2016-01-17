@@ -31,7 +31,54 @@ local ListInstance = false
 
 local Instances = { }
 local GameHeroes = { }
+local version = "0.0117"
 
+class('AAAUpdate')
+function AAAUpdate:__init()
+	self.updating = false
+	self.updated = false
+	AddDrawCallback(function ()
+		self:draw()
+	end)
+	self:download()
+end
+
+function AAAUpdate:download( ... )
+	PrintLocal("Checking Version Info,local version:"..version)
+	self.updating = true
+	local serveradress = "raw.githubusercontent.com"
+	local scriptadress = "/leo9515/Tutorial/test"
+	local ServerVersionDATA = GetWebResult(serveradress , scriptadress.."/AAA.version")
+	if ServerVersionDATA then
+		local ServerVersion = tonumber(ServerVersionDATA)
+		if ServerVersion then
+			if ServerVersion > tonumber(version) then
+				PrintLocal("New version found:"..ServerVersion)
+				PrintLocal("Updating, don't press F9")
+				DownloadFile("http://"..serveradress..scriptadress.."/AAA.lua",SCRIPT_PATH.."AAA.lua", function ()
+					updated = true
+				end)
+			else
+				PrintLocal("No update found")
+			end
+		else
+			PrintLocal("An error occured, while updating, please reload")
+		end
+	else
+		PrintLocal("Could not connect to update Server")
+	end
+	self.updating = false
+end
+
+function AAAUpdate:draw()
+	local w, h = WINDOW_W, WINDOW_H
+	if self.updating then
+		DrawTextA("[AAA] Updating", 25, 10,h*0.05,ARGB(255,255,255,255), "left", "center")
+	end
+	if updated then
+		DrawTextA("[AAA] Updated, press 2xF9", 25, 10,h*0.05,ARGB(255,255,255,255), "left", "center")
+	end
+end
 
 local Draw = {
 	Width = 374, -- even number or separator lines on params will be off by one
@@ -168,6 +215,7 @@ function SaveMaster()
         P = P + #instance._param
         PS = PS + #instance._permaShow
     end
+	if(MasterIndex ~= nil) then
     Master["I" .. MasterIndex] = I
     Master["P" .. MasterIndex] = P
     Master["PS" .. MasterIndex] = PS
@@ -176,6 +224,7 @@ function SaveMaster()
         settings[var] = value
     end
 	SaveSettings("Master", settings)
+	end
 end
 function SaveMenu()
 	GetSave("scriptConfig").Menu.menuKey = MenuKey
@@ -678,7 +727,7 @@ function _G.scriptConfig:__init(header, name, parent)
 	self.name = name
     --print("configheader:",header)
     --WriteFile(('["'.. header ..'"]'.. ' = '.. '" ",').."\n", SCRIPT_PATH .. "results.txt","a")
-    translateheaderchk(header)
+    --translateheaderchk(header)
 	self._param = { }
 	self._subInstances = { }
 	self._tsInstances = { }
@@ -3173,16 +3222,16 @@ function translationchk(text)
     end
     return text2
 end
-function translateheaderchk(header)
+--[[function translateheaderchk(header)
     for i ,v in pairs(SupportedScriptList) do
     if(v == header) then 
     PrintLocal(header.." loaded!")
     end
     end
-end
+end]]--
 function OnLoad()
-	PrintLocal("Translator loaded successfully!")
-    PrintLocal("by: leoxp,Have fun!")
+	AAAUpdate()
+	PrintLocal("Loaded successfully! by: leoxp,Have fun!")
 end
 function OnUnload()
 	SaveMaster()
