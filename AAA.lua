@@ -273,18 +273,20 @@ function InitializeDraw()
 	return InitDraw
 end
 function InitializeGameHeroes()
-	for i = 1, heroManager.iCount do
-		local hero = heroManager:getHero(i)
-		if (hero and hero.valid (hero.team ~= myHero.team)) then
-			GameEnemyCount = GameEnemyCount + 1
-			GameHeroes[#GameHeroes + 1] = {
-				hero = hero,
-				index = i,
-				tIndex = GameEnemyCount,
-				ignore = false,
-				priority = 1,
-				enemy = true,
-			}
+	if(#GameHeroes == 0) then
+		for i = 1, heroManager.iCount do
+			local hero = heroManager:getHero(i)
+			if (hero and hero.valid and(hero.team ~= myHero.team)) then
+				GameEnemyCount = GameEnemyCount + 1
+				GameHeroes[#GameHeroes + 1] = {
+					hero = hero,
+					index = i,
+					tIndex = GameEnemyCount,
+					ignore = false,
+					priority = 1,
+					enemy = true,
+				}
+			end
 		end
 	end
 end
