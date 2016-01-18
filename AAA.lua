@@ -1,37 +1,27 @@
-local Config = nil
-local Master = nil
-local ChangingKeyVariable = nil
-local MenuIndex = nil
-local LastKeyState = nil
-local ChangingKeyInstance = nil
-local HeaderSprite = nil
-local SelectorConfig = nil
-local Background = nil
-local Foreground = nil
-local FontColor = nil
-local White = nil
-local Gray = nil
-local DarkGreen = nil
-local DarkRed = nil
-local LightGray = nil
-
-local MenuKey = 16
-local GameEnemyCount = 0
-
-local InitConfig = true
-local InitDraw = true
-local InitOnDraw = true
-local InitOnMsg = true
-
-local ChangingKey = false
-local ChangingKeyMenu = false
-local Moving = false
-local SliceInstance = false
-local ListInstance = false
-
-local Instances = { }
-local GameHeroes = { }
-local version = "0.0117"
+local version = "0.0118"
+local Draw = {
+	Width = 374, -- even number or separator lines on params will be off by one
+	Padding = 3,
+	FontSize = 14,
+	Opacity = 60,
+    ColorOpacity = 100,
+    FontOpacity = 255,
+	Row4x = 0.8,
+	Row3x = 0.7,
+	CellHeight = 20,
+	HeaderHeight = 30,
+	DetailWidth = 35, -- ex: number beside slider
+}
+local Colors = {
+	Background = { 23, 32, 33 },
+	Foreground = { 38, 76, 72 },
+	FontColor = { 255, 255, 255 },
+	White = { 255, 255, 255 },
+	Gray = { 128, 128, 128 },
+	DarkGreen = { 0, 128, 0 },
+	DarkRed = { 128, 0, 0 },
+	LightGray = { 211, 211, 211 },
+}
 
 class('AAAUpdate')
 function AAAUpdate:__init()
@@ -79,959 +69,833 @@ function AAAUpdate:draw()
 		DrawTextA("[AAA] Updated, press 2xF9", 25, 10,h*0.05,ARGB(255,255,255,255), "left", "center")
 	end
 end
-
-local Draw = {
-	Width = 374, -- even number or separator lines on params will be off by one
-	Padding = 3,
-	FontSize = 14,
-	Opacity = 60,
-    ColorOpacity = 100,
-    FontOpacity = 255,
-	Row4x = 0.8,
-	Row3x = 0.7,
-	CellHeight = 20,
-	HeaderHeight = 30,
-	DetailWidth = 35, -- ex: number beside slider
-}
-local Global = {
-	TS_SetFocus = _G.TS_SetFocus,
-	TS_SetHeroPriority = _G.TS_SetHeroPriority,
-	TS_Ignore = TS_Ignore,
-}
-local MouseOffset = {
-	x = 0,
-	y = 0,
-}
-local Modifying = {
-	Width = false,
-}
-local Colors = {
-	Background = { 23, 32, 33 },
-	Foreground = { 38, 76, 72 },
-	FontColor = { 255, 255, 255 },
-	White = { 255, 255, 255 },
-	Gray = { 128, 128, 128 },
-	DarkGreen = { 0, 128, 0 },
-	DarkRed = { 128, 0, 0 },
-	LightGray = { 211, 211, 211 },
-}
-
-function Class(name)
-	local o = { }
-	o.__index = o
-	setmetatable(o, {
-		__call = function(_, ...)
-			local i = { }
-			setmetatable(i, o)
-			if (i.__init) then
-				i.__init(i, table.unpack({ ... }))
-			end
-			return i
-		end
-	})
-	_ENV[name] = o
-end
-function SensitiveMerge(base, mergeTable)
-	for i, v in pairs(mergeTable) do
-		if (type(base[i]) == type(v)) then
-			if (type(v) == "table") then
-				SensitiveMerge(base[i], v)
-			else
-				base[i] = v
-			end
-		end
-	end
-	return base
-end
-function MergeExisting(t1, t2)
-	local output = t1
-	if (t2) then
-		for k1, v in pairs(t2) do
-			for k2, _ in pairs(t1) do
-				if (k2 == k1) then
-					output[k1] = v
-					break
-				end
-			end
-		end
-	end
-	return output
-end
-function GetKeyAsString(key)
-	if (key == 46) then
-		return "n/a"
-	end
-	return ((key > 32) and (key < 96) and string.char(key) or tostring(key))
+local _SC = { init = true, initDraw = true, menuKey = 16, useTS = false, menuIndex = -1, instances = {}, _changeKey = false, _changeKeyInstance = false, _sliceInstance = false, _listInstance = false }
+local function __SC__remove(name)
+    if not GetSave("scriptConfig")[name] then GetSave("scriptConfig")[name] = {} end
+    table.clear(GetSave("scriptConfig")[name])
 end
 
-function LoadSettings(name)
-	if (not GetSave("scriptConfig")[name]) then
-		GetSave("scriptConfig")[name] = { }
-	end
+local function __SC__load(name)
+    if not GetSave("scriptConfig")[name] then GetSave("scriptConfig")[name] = {} end
     return GetSave("scriptConfig")[name]
 end
-function SaveSettings(name, content)
-    if (not GetSave("scriptConfig")[name]) then
-		GetSave("scriptConfig")[name] = { }
-	end
+
+local function __SC__save(name, content)
+    if not GetSave("scriptConfig")[name] then GetSave("scriptConfig")[name] = {} end
     table.clear(GetSave("scriptConfig")[name])
     table.merge(GetSave("scriptConfig")[name], content, true)
-	GetSave("scriptConfig"):Save()
-end
-function RemoveSettings(name)
-    if not GetSave("scriptConfig")[name] then 
-        GetSave("scriptConfig")[name] = {} 
-    end
-    table.clear(GetSave("scriptConfig")[name])
 end
 
-function UpdateMaster()
-	Master = LoadSettings("Master")
-    MasterY, MasterYp = 1, 0
-    MasterY = (Master.useTS and 1 or 0)
-    for i = 1, MasterIndex - 1 do
-        MasterY = MasterY + Master["I" .. i]
-        MasterYp = MasterYp + Master["PS" .. i]
-    end
-    local size, sizep = (Master.useTS and 2 or 1), 0
-    for i = 1, Master.iCount do
-        size = size + Master["I" .. i]
-        sizep = sizep + Master["PS" .. i]
-    end
-	Draw.x = Master.x or Draw.x
-	Draw.y = Master.y or Draw.y
-
-end
-function SaveMaster()
-	local settings = {
-		x = Draw.x,
-		y = Draw.y,
-        px = Draw.px,
-        py = Draw.py,
-	}
+local function __SC__saveMaster()
+    local config = {}
     local P, PS, I = 0, 0, 0
-    for _, instance in pairs(Instances) do
+    for _, instance in pairs(_SC.instances) do
         I = I + 1
         P = P + #instance._param
         PS = PS + #instance._permaShow
     end
-	if(MasterIndex ~= nil) then
-    Master["I" .. MasterIndex] = I
-    Master["P" .. MasterIndex] = P
-    Master["PS" .. MasterIndex] = PS
-    if not Master.useTS and SelectorConfig then Master.useTS = true end
-    for var, value in pairs(Master) do
-        settings[var] = value
+    _SC.master["I" .. _SC.masterIndex] = I
+    _SC.master["P" .. _SC.masterIndex] = P
+    _SC.master["PS" .. _SC.masterIndex] = PS
+    if not _SC.master.useTS and _SC.useTS then _SC.master.useTS = true end
+    for var, value in pairs(_SC.master) do
+        config[var] = value
     end
-	SaveSettings("Master", settings)
-	end
-end
-function SaveMenu()
-	GetSave("scriptConfig").Menu.menuKey = MenuKey
-	GetSave("scriptConfig"):Save()
-	SaveMaster()
+    __SC__save("Master", config)
 end
 
-function GetGameHero(target)
-    if (type(target) == "string") then
-		for i = 1, #GameHeroes do
-			local gameHero = GameHeroes[i]
-            if ((gameHero.hero.charName == target) and (gameHero.hero.team ~= player.team)) then
-                return gameHero.hero
-            end
-        end
-    elseif (type(target) == "number") then
-        return heroManager:getHero(target)
-    elseif (target == nil) then
-        return GetTarget()
-    else
-        return target
+local function __SC__updateMaster()
+    _SC.master = __SC__load("Master")
+    _SC.masterY, _SC.masterYp = 1, 0
+    _SC.masterY = (_SC.master.useTS and 1 or 0)
+    for i = 1, _SC.masterIndex - 1 do
+        _SC.masterY = _SC.masterY + _SC.master["I" .. i]
+        _SC.masterYp = _SC.masterYp + _SC.master["PS" .. i]
+    end
+    local size, sizep = (_SC.master.useTS and 2 or 1), 0
+    for i = 1, _SC.master.iCount do
+        size = size + _SC.master["I" .. i]
+        sizep = sizep + _SC.master["PS" .. i]
+    end
+    _SC.draw.height = size * _SC.draw.cellSize
+    _SC.pDraw.height = sizep * _SC.pDraw.cellSize
+    _SC.draw.x = _SC.master.x
+    _SC.draw.y = _SC.master.y
+    _SC.pDraw.x = _SC.master.px
+    _SC.pDraw.y = _SC.master.py
+    _SC._Idraw.x = _SC.draw.x + _SC.draw.width + _SC.draw.border * 2
+end
+
+local function __SC__saveMenu()
+    __SC__save("Menu", { menuKey = _SC.menuKey, draw = { x = _SC.draw.x, y = _SC.draw.y }, pDraw = { x = _SC.pDraw.x, y = _SC.pDraw.y } })
+    _SC.master.x = _SC.draw.x
+    _SC.master.y = _SC.draw.y
+    _SC.master.px = _SC.pDraw.x
+    _SC.master.py = _SC.pDraw.y
+    __SC__saveMaster()
+end
+
+local function __SC__init_draw()
+    if _SC.initDraw then
+        UpdateWindow()
+        --_SC.draw = { x = WINDOW_W and math.floor(WINDOW_W / 50) or 20, y = WINDOW_H and math.floor(WINDOW_H / 4) or 190, y1 = 0, height = 0, fontSize = WINDOW_H and math.round(WINDOW_H / 54) or 14, width = WINDOW_W and math.round(WINDOW_W / 4.8) or 213, border = 2, background = 1413167931, textColor = 4290427578, trueColor = 1422721024, falseColor = 1409321728, move = false }
+		_SC.draw = {x = WINDOW_W and math.floor(WINDOW_W / 50) or 20, y = WINDOW_H and math.floor(WINDOW_H / 4) or 20, y1 = 0, height = 0, fontSize = 14, width = 374, border = 2, background = ARGB(Draw.Opacity, Colors.Background[1], Colors.Background[2], Colors.Background[3]), textColor = ARGB(Draw.FontOpacity, Colors.FontColor[1], Colors.FontColor[2], Colors.FontColor[3]), trueColor = 1422721024, falseColor = 1409321728, move = false }
+        _SC.pDraw = { x = WINDOW_W and math.floor(WINDOW_W * 0.66) or 675, y = WINDOW_H and math.floor(WINDOW_H * 0.8) or 608, y1 = 0, height = 0, fontSize = WINDOW_H and math.round(WINDOW_H / 72) or 10, width = WINDOW_W and math.round(WINDOW_W / 6.4) or 160, border = 1, background = 1413167931, textColor = 4290427578, trueColor = 1422721024, falseColor = 1409321728, move = false }
+        local menuConfig = __SC__load("Menu")
+        table.merge(_SC, menuConfig, true)
+        _SC.color = { 
+		lgrey = ARGB(Draw.Opacity, Colors.Background[1], Colors.Background[2], Colors.Background[3]), 
+		grey = ARGB(Draw.FontOpacity, Colors.FontColor[1], Colors.FontColor[2], Colors.FontColor[3]), 
+		red = ARGB(Draw.ColorOpacity, Colors.DarkRed[1], Colors.DarkRed[2], Colors.DarkRed[3]), 
+		green = ARGB(Draw.Opacity, Colors.DarkGreen[1], Colors.DarkGreen[2], Colors.DarkGreen[3]), 
+		ivory = 4294967280 }
+        _SC.draw.cellSize, _SC.draw.midSize, _SC.draw.row4, _SC.draw.row3, _SC.draw.row2, _SC.draw.row1 = _SC.draw.fontSize + _SC.draw.border, _SC.draw.fontSize / 2, _SC.draw.width * 0.9, _SC.draw.width * 0.8, _SC.draw.width * 0.7, _SC.draw.width * 0.6
+        _SC.pDraw.cellSize, _SC.pDraw.midSize, _SC.pDraw.row = _SC.pDraw.fontSize + _SC.pDraw.border, _SC.pDraw.fontSize / 2, _SC.pDraw.width * 0.7
+        _SC._Idraw = { x = _SC.draw.x + _SC.draw.width + _SC.draw.border * 2, y = _SC.draw.y, height = 0 }
+        if WINDOW_H < 500 or WINDOW_W < 500 then return true end
+        _SC.initDraw = nil
+    end
+    return _SC.initDraw
+end
+
+local function __SC__init(name)
+    if name == nil then
+        return (_SC.init or __SC__init_draw())
+    end
+    if _SC.init then
+        _SC.init = nil
+        __SC__init_draw()
+        local gameStart = GetGame()
+        _SC.master = __SC__load("Master")
+        --[[ SurfaceS: Look into it! When loading the master, it screws up the Menu, when you change at the same time the running scripts.
+           if _SC.master.osTime ~= nil and _SC.master.osTime == gameStart.osTime then
+              for i = 1, _SC.master.iCount do
+                  if _SC.master["name" .. i] == name then _SC.masterIndex = i end
+              end
+              if _SC.masterIndex == nil then
+                  _SC.masterIndex = _SC.master.iCount + 1
+                  _SC.master["name" .. _SC.masterIndex] = name
+                  _SC.master.iCount = _SC.masterIndex
+                  __SC__saveMaster()
+             end
+        else]]
+        __SC__remove("Master")
+        _SC.masterIndex = 1
+        _SC.master.useTS = false
+        _SC.master.x = _SC.draw.x
+        _SC.master.y = _SC.draw.y
+        _SC.master.px = _SC.pDraw.x
+        _SC.master.py = _SC.pDraw.y
+        _SC.master.osTime = gameStart.osTime
+        _SC.master.name1 = name
+        _SC.master.iCount = 1
+        __SC__saveMaster()
+        --end
+    end
+    __SC__updateMaster()
+end
+
+local function __SC__txtKey(key)
+    return (key > 32 and key < 96 and " " .. string.char(key) .. " " or "(" .. tostring(key) .. ")")
+end
+
+local function __SC__DrawInstance(header, selected)
+    DrawLine(_SC.draw.x + _SC.draw.width / 2, _SC.draw.y1, _SC.draw.x + _SC.draw.width / 2, _SC.draw.y1 + _SC.draw.cellSize, _SC.draw.width + _SC.draw.border * 2, (selected and _SC.color.red or _SC.color.lgrey))
+    DrawText(translationchk(header), _SC.draw.fontSize, _SC.draw.x, _SC.draw.y1, (selected and _SC.color.ivory or _SC.color.grey))
+    _SC.draw.y1 = _SC.draw.y1 + _SC.draw.cellSize
+end
+
+local function __SC__ResetSubIndexes()
+    for i, instance in ipairs(_SC.instances) do
+        instance:ResetSubIndexes()
     end
 end
-function GetGameHeroIndex(target)
-	if (type(target) == "string") then
-		for i = 1, #GameHeroes do
-			local gameHero = GameHeroes[i]
-            if ((gameHero.hero.charName == target) and (gameHero.hero.team ~= player.team)) then
-                return gameHero.index
-            end
-        end
-    elseif (type(target) == "number") then
-        return target
-    else
-        return GetGameHeroIndex(target.charName)
-    end
-end
 
-function InitializeConfig(name)
-	if (name == nil) then
-		return (InitConfig or InitializeDraw())
-	end
-    local gameStart = GetGame()
-	if (InitConfig) then
-		InitConfig = nil
-		InitializeDraw()
-		MergeExisting(Draw, LoadSettings("Master"))
-        Master = LoadSettings("Master")
-        RemoveSettings("Master")
-        MasterIndex = 1
-        Master.useTS = false
-        Master.x = Draw.x
-        Master.y = Draw.y
-        Master.px = Draw.px
-        Master.py = Draw.py
-        Master.osTime = gameStart.osTime
-        Master.name1 = name
-        Master.iCount = 1
-		SaveMaster()
-	end
-	UpdateMaster()
-end
-function InitializeDraw()
-	if (InitDraw) then
-		InitDraw = nil
-		UpdateWindow()
-		Draw.x = WINDOW_W and math.floor(WINDOW_W / 50) or 20
-		Draw.y = WINDOW_H and math.floor(WINDOW_H / 4) or 20
-        Draw.px = WINDOW_W and math.floor(WINDOW_W * 0.66) or 675
-        Draw.py = WINDOW_H and math.floor(WINDOW_H * 0.8) or 608
-        Draw.PermashowFontSize = WINDOW_H and math.round(WINDOW_H / 60) -2 or 14
-        Draw.midSize = Draw.PermashowFontSize / 2
-        Draw.border = 1
-        Draw.cellSize = Draw.border + Draw.PermashowFontSize
-		Draw.Width = WINDOW_W and math.round(WINDOW_W / 4.8) or 213
-        Draw.row = Draw.Width * 0.7
-		Draw.Row4 = Draw.Width * Draw.Row4x
-		Draw.Row3 = Draw.Width * Draw.Row3x
-		--Draw.CellHeight = Draw.FontSize * 1.3
-		--Draw.HeaderHeight = math.round(Draw.CellHeight * 1.4)
-		--Draw.DetailWidth = Draw.FontSize * 2.2
-		Background = ARGB(Draw.Opacity, Colors.Background[1], Colors.Background[2], Colors.Background[3])
-		Foreground = ARGB(Draw.Opacity, Colors.Foreground[1], Colors.Foreground[2], Colors.Foreground[3])
-		FontColor = ARGB(Draw.FontOpacity, Colors.FontColor[1], Colors.FontColor[2], Colors.FontColor[3])
-		White = ARGB(Draw.FontOpacity, Colors.White[1], Colors.White[2], Colors.White[3])
-		Gray = ARGB(Draw.FontOpacity, Colors.Gray[1], Colors.Gray[2], Colors.Gray[3])
-		DarkGreen = ARGB(Draw.Opacity, Colors.DarkGreen[1], Colors.DarkGreen[2], Colors.DarkGreen[3])
-		DarkRed = ARGB(Draw.ColorOpacity, Colors.DarkRed[1], Colors.DarkRed[2], Colors.DarkRed[3])
-		LightGray = ARGB(Draw.FontOpacity, Colors.LightGray[1], Colors.LightGray[2], Colors.LightGray[3])
-		MenuKey = LoadSettings("Menu").menuKey or 16
-		if ((WINDOW_H < 500) or (WINDOW_W < 500)) then
-			return true
-		end
-	end
-	return InitDraw
-end
-function InitializeGameHeroes()
-	if(#GameHeroes == 0) then
-		for i = 1, heroManager.iCount do
-			local hero = heroManager:getHero(i)
-			if (hero and hero.valid and(hero.team ~= myHero.team)) then
-				GameEnemyCount = GameEnemyCount + 1
-				GameHeroes[#GameHeroes + 1] = {
-					hero = hero,
-					index = i,
-					tIndex = GameEnemyCount,
-					ignore = false,
-					priority = 1,
-					enemy = true,
-				}
-			end
-		end
-	end
-end
-
-function LoadConfig()
-	if (InitOnDraw) then
-		InitOnDraw = nil
-		AddDrawCallback(ConfigOnDraw)
-	end
-	if (InitOnMsg) then
-		InitOnMsg = nil
-		AddMsgCallback(ConfigOnWndMsg)
-	end
-end
-
-function StartMoveWithMouse()
-	Moving = true
-	local pos = GetCursorPos()
-	MouseOffset.x = pos.x - Draw.x
-	MouseOffset.y = pos.y - Draw.y
-end
-
-function ConfigOnDraw()
-	if (InitializeConfig() or Console__IsOpen or GetGame().isOver) then return end
-        local y1 = Draw.py + (Draw.cellSize * MasterYp)
-------------------------------Function------------------------------
-local function DrawPermaShows(instance)
-    --print("permashownum:",#instance._permaShow)
-if #instance._permaShow > 0 then
-    for _, varIndex in ipairs(instance._permaShow) do
-        --if(type(instance[instance._param[_].var]) == "number") then
-        local pVar = instance[instance._param[_].var] 
-        --print(type(pVar))
-        --local var = self[self._param[i].var]
-        DrawLine(Draw.px - Draw.border, y1 + Draw.midSize, Draw.px + Draw.row - Draw.border, y1 + Draw.midSize, Draw.cellSize, ARGB(Draw.Opacity, Colors.Gray[1], Colors.Gray[2], Colors.Gray[3]))
-        for i, v in pairs(instance._param) do
-            if (v.var == varIndex) then
-                DrawTextA(v.text, Draw.PermashowFontSize, Draw.px, y1, White, "left", "left")
-                if v.pType == SCRIPT_PARAM_SLICE or v.pType == SCRIPT_PARAM_LIST or v.pType == SCRIPT_PARAM_INFO then
-                DrawLine(Draw.px + Draw.row, y1 + Draw.midSize, Draw.px + Draw.Width + Draw.border, y1 + Draw.midSize, Draw.cellSize, ARGB(Draw.Opacity, Colors.Gray[1], Colors.Gray[2], Colors.Gray[3]))
-                    if v.pType == SCRIPT_PARAM_LIST then
-                        local text = tostring(v.listTable[pVar])
-                        local maxWidth =(Draw.Width - Draw.row) * 0.8
-                        local textWidth = GetTextArea(text, Draw.FontSize).x
-                        if textWidth > maxWidth then
-                            text = text:sub(1, math.floor(text:len() * maxWidth / textWidth)) .. ".."
-                        end
-                        DrawTextA(text, Draw.FontSize, Draw.px + Draw.row, y1, White,"left","left")
-                    else
-                        DrawTextA(tostring(pVar), Draw.FontSize, Draw.px + Draw.row + Draw.border, y1, White,"left","left")
+local __SC__OnDraw, __SC__OnWndMsg
+local function __SC__OnLoad()
+    if not __SC__OnDraw then
+        function __SC__OnDraw()
+            if __SC__init() or Console__IsOpen or GetGame().isOver then return end
+            if IsKeyDown(_SC.menuKey) or _SC._changeKey then
+                if _SC.draw.move then
+                    local cursor = GetCursorPos()
+                    _SC.draw.x = cursor.x - _SC.draw.offset.x
+                    _SC.draw.y = cursor.y - _SC.draw.offset.y
+                    _SC._Idraw.x = _SC.draw.x + _SC.draw.width + _SC.draw.border * 2
+                elseif _SC.pDraw.move then
+                    local cursor = GetCursorPos()
+                    _SC.pDraw.x = cursor.x - _SC.pDraw.offset.x
+                    _SC.pDraw.y = cursor.y - _SC.pDraw.offset.y
+                end
+                if _SC.masterIndex == 1 then
+                    DrawLine(_SC.draw.x + _SC.draw.width / 2, _SC.draw.y, _SC.draw.x + _SC.draw.width / 2, _SC.draw.y + _SC.draw.height, _SC.draw.width + _SC.draw.border * 2, 1414812756) -- grey
+                    _SC.draw.y1 = _SC.draw.y
+                    local menuText = _SC._changeKey and not _SC._changeKeyVar and "press key for Menu" or "Menu"
+                    DrawText(translationchk(menuText), _SC.draw.fontSize, _SC.draw.x, _SC.draw.y1, _SC.color.ivory) -- ivory
+                    DrawText(__SC__txtKey(_SC.menuKey), _SC.draw.fontSize, _SC.draw.x + _SC.draw.width * 0.9, _SC.draw.y1, _SC.color.grey)
+                end
+                _SC.draw.y1 = _SC.draw.y + _SC.draw.cellSize
+                if _SC.useTS then
+                    __SC__DrawInstance("Target Selector", (_SC.menuIndex == 0))
+                    if _SC.menuIndex == 0 then
+                        DrawLine(_SC._Idraw.x + _SC.draw.width / 2, _SC.draw.y, _SC._Idraw.x + _SC.draw.width / 2, _SC.draw.y + _SC._Idraw.height, _SC.draw.width + _SC.draw.border * 2, 1414812756) -- grey
+                        DrawText(translationchk("Target Selector"), _SC.draw.fontSize, _SC._Idraw.x, _SC.draw.y, _SC.color.ivory)
+                        _SC._Idraw.y = TS__DrawMenu(_SC._Idraw.x, _SC.draw.y + _SC.draw.cellSize)
+                        _SC._Idraw.height = _SC._Idraw.y - _SC.draw.y
                     end
+                end
+                _SC.draw.y1 = _SC.draw.y + _SC.draw.cellSize + (_SC.draw.cellSize * _SC.masterY)
+                for index, instance in ipairs(_SC.instances) do
+                    __SC__DrawInstance(instance.header, (_SC.menuIndex == index))
+                    if _SC.menuIndex == index then instance:OnDraw() end
+                end
+            end
+            local y1 = _SC.pDraw.y + (_SC.pDraw.cellSize * _SC.masterYp)
+            local function DrawPermaShows(instance)
+
+                if #instance._permaShow > 0 then
+                    for _, varIndex in ipairs(instance._permaShow) do
+                        local pVar = instance._param[varIndex].var
+                        DrawLine(_SC.pDraw.x - _SC.pDraw.border, y1 + _SC.pDraw.midSize, _SC.pDraw.x + _SC.pDraw.row - _SC.pDraw.border, y1 + _SC.pDraw.midSize, _SC.pDraw.cellSize, _SC.color.lgrey)
+                        DrawText(translationchk(instance._param[varIndex].text), _SC.pDraw.fontSize, _SC.pDraw.x, y1, _SC.color.grey)
+                        if instance._param[varIndex].pType == SCRIPT_PARAM_SLICE or instance._param[varIndex].pType == SCRIPT_PARAM_LIST or instance._param[varIndex].pType == SCRIPT_PARAM_INFO then
+                            DrawLine(_SC.pDraw.x + _SC.pDraw.row, y1 + _SC.pDraw.midSize, _SC.pDraw.x + _SC.pDraw.width + _SC.pDraw.border, y1 + _SC.pDraw.midSize, _SC.pDraw.cellSize, _SC.color.lgrey)
+                            if instance._param[varIndex].pType == SCRIPT_PARAM_LIST then
+                                local text = tostring(instance._param[varIndex].listTable[instance[pVar]])
+                                local maxWidth = (_SC.pDraw.width - _SC.pDraw.row) * 0.8
+                                local textWidth = GetTextArea(text, _SC.pDraw.fontSize).x
+                                if textWidth > maxWidth then
+                                    text = text:sub(1, math.floor(text:len() * maxWidth / textWidth)) .. ".."
+                                end
+                                DrawText(translationchk(text), _SC.pDraw.fontSize, _SC.pDraw.x + _SC.pDraw.row, y1, _SC.color.grey)
+                            else
+                                DrawText(translationchk(tostring(instance[pVar])), _SC.pDraw.fontSize, _SC.pDraw.x + _SC.pDraw.row + _SC.pDraw.border, y1, _SC.color.grey)
+                            end
+                        else
+                            DrawLine(_SC.pDraw.x + _SC.pDraw.row, y1 + _SC.pDraw.midSize, _SC.pDraw.x + _SC.pDraw.width + _SC.pDraw.border, y1 + _SC.pDraw.midSize, _SC.pDraw.cellSize, (instance[pVar] and _SC.color.green or _SC.color.lgrey))
+                            DrawText((instance[pVar] and "      ON" or "      OFF"), _SC.pDraw.fontSize, _SC.pDraw.x + _SC.pDraw.row + _SC.pDraw.border, y1, _SC.color.grey)
+                        end
+                        y1 = y1 + _SC.pDraw.cellSize
+                    end
+                end
+                for _, subInstance in ipairs(instance._subInstances) do
+                    DrawPermaShows(subInstance)
+                end
+            end
+            for _, instance in ipairs(_SC.instances) do
+                DrawPermaShows(instance)
+            end
+        end
+
+        AddDrawCallback(__SC__OnDraw)
+    end
+    if not __SC__OnWndMsg then
+        function __SC__OnWndMsg(msg, key)
+            if __SC__init() or Console__IsOpen then return end
+            local msg, key = msg, key
+            if key == _SC.menuKey and _SC.lastKeyState ~= msg then
+                _SC.lastKeyState = msg
+                __SC__updateMaster()
+            end
+            if _SC._changeKey then
+                if msg == KEY_DOWN then
+                    if _SC._changeKeyMenu then return end
+                    _SC._changeKey = false
+                    if _SC._changeKeyVar == nil then
+                        _SC.menuKey = key
+                        if _SC.masterIndex == 1 then __SC__saveMenu() end
+                    else
+                        _SC._changeKeyInstance._param[_SC._changeKeyVar].key = key
+                        _SC._changeKeyInstance:save()
+                        --_SC.instances[_SC.menuIndex]._param[_SC._changeKeyVar].key = key
+                        --_SC.instances[_SC.menuIndex]:save()
+                    end
+                    return
                 else
-                DrawLine(Draw.px + Draw.row, y1 + Draw.midSize, Draw.px + Draw.Width + Draw.border, y1 + Draw.midSize, Draw.cellSize,(pVar and DarkGreen or DarkRed))
-                DrawText((pVar and "      ON" or "      OFF"), Draw.FontSize, Draw.px + Draw.row + Draw.border, y1, White)
+                    if _SC._changeKeyMenu and key == _SC.menuKey then _SC._changeKeyMenu = false end
+                end
+            end
+            if msg == WM_LBUTTONDOWN and IsKeyDown(_SC.menuKey) then
+                if CursorIsUnder(_SC.draw.x, _SC.draw.y, _SC.draw.width, _SC.draw.height) then
+                    _SC.menuIndex = -1
+                    __SC__ResetSubIndexes()
+                    if CursorIsUnder(_SC.draw.x + _SC.draw.width - _SC.draw.fontSize * 1.5, _SC.draw.y, _SC.draw.fontSize, _SC.draw.cellSize) then
+                        _SC._changeKey, _SC._changeKeyVar, _SC._changeKeyMenu = true, nil, true
+                        return
+                    elseif CursorIsUnder(_SC.draw.x, _SC.draw.y, _SC.draw.width, _SC.draw.cellSize) then
+                        _SC.draw.offset = Vector(GetCursorPos()) - _SC.draw
+                        _SC.draw.move = true
+                        return
+                    else
+                        if _SC.useTS and CursorIsUnder(_SC.draw.x, _SC.draw.y + _SC.draw.cellSize, _SC.draw.width, _SC.draw.cellSize) then _SC.menuIndex = 0 __SC__ResetSubIndexes() end
+                        local y1 = _SC.draw.y + _SC.draw.cellSize + (_SC.draw.cellSize * _SC.masterY)
+                        for index, _ in ipairs(_SC.instances) do
+                            if CursorIsUnder(_SC.draw.x, y1, _SC.draw.width, _SC.draw.cellSize) then _SC.menuIndex = index __SC__ResetSubIndexes() end
+                            y1 = y1 + _SC.draw.cellSize
+                        end
+                    end
+                elseif CursorIsUnder(_SC.pDraw.x, _SC.pDraw.y, _SC.pDraw.width, _SC.pDraw.height) then
+                    _SC.pDraw.offset = Vector(GetCursorPos()) - _SC.pDraw
+                    _SC.pDraw.move = true
+                elseif _SC.menuIndex == 0 then
+                    TS_ClickMenu(_SC._Idraw.x, _SC.draw.y + _SC.draw.cellSize)
+                elseif _SC.menuIndex > 0 then
+                    local function CheckOnWndMsg(instance)
+                        if CursorIsUnder(instance._x, _SC.draw.y, _SC.draw.width, instance._height) then
+                            instance:OnWndMsg()
+                        elseif instance._subMenuIndex > 0 then
+                            CheckOnWndMsg(instance._subInstances[instance._subMenuIndex])
+                        end
+                    end
+                    CheckOnWndMsg(_SC.instances[_SC.menuIndex])
+                end
+            elseif msg == WM_LBUTTONUP then
+                if _SC.draw.move or _SC.pDraw.move then
+                    _SC.draw.move = false
+                    _SC.pDraw.move = false
+                    if _SC.masterIndex == 1 then __SC__saveMenu() end
+                    return
+                elseif _SC._sliceInstance then
+                    _SC._sliceInstance:save()
+                    _SC._sliceInstance._slice = false
+                    _SC._sliceInstance = false
+
+                    return
+                elseif _SC._listInstance then
+                    _SC._listInstance:save()
+                    _SC._listInstance._list = false
+                    _SC._listInstance = false
+                end
+            else
+                local function CheckOnWndMsg(instance)
+
+                    for _, param in ipairs(instance._param) do
+                        if param.pType == SCRIPT_PARAM_ONKEYTOGGLE and key == param.key and msg == KEY_DOWN then
+                            instance[param.var] = not instance[param.var]
+                        elseif param.pType == SCRIPT_PARAM_ONKEYDOWN and key == param.key then
+                            instance[param.var] = (msg == KEY_DOWN)
+                        end
+                    end
+                    for _, subInstance in ipairs(instance._subInstances) do
+                        CheckOnWndMsg(subInstance)
+                    end
+                end
+                for _, instance in ipairs(_SC.instances) do
+                    CheckOnWndMsg(instance)
                 end
             end
         end
 
-        y1 = y1 + Draw.cellSize
+        AddMsgCallback(__SC__OnWndMsg)
     end
-end
-end
-------------------------------DrawPermaShow-------------------------
-    for _, instance in ipairs(Instances) do
-        DrawPermaShows(instance)
-    end
-----------------------------End DrawPermaShow-----------------------
-
-	if (IsKeyDown(MenuKey) or ChangingKey or Moving) then
-		if (Moving) then
-			local pos = GetCursorPos()
-			Draw.x = math.min(math.max(pos.x - MouseOffset.x, 0), WINDOW_W - Draw.Width)
-			Draw.y = math.min(math.max(pos.y - MouseOffset.y, 0), WINDOW_H - Draw.HeaderHeight)
-		end
-		DrawMainHeaderSprite()
-		Draw.y1 = Draw.y + Draw.HeaderHeight - 1
-		if (SelectorConfig) then
-			SelectorConfig._y1 = Draw.y1
-			DrawMenuSprite(Draw.x, Draw.y1, SelectorConfig.header, (MenuIndex == 0))
-			if (MenuIndex == 0) then
-				SelectorConfig:OnDraw()
-			end
-			Draw.y1 = Draw.y1 + Draw.CellHeight - 1
-		end
-		for i = 1, #Instances do
-			local selected = (MenuIndex == i)
-			Instances[i]._y1 = Draw.y1
-			DrawMenuSprite(Draw.x, Draw.y1, Instances[i].header, selected)
-			if (selected) then
-				Instances[i]:OnDraw()
-			end
-			Draw.y1 = Draw.y1 + Draw.CellHeight - 1
-		end
-	end
-end
-function ConfigOnWndMsg(message, key)
-	if (InitializeConfig() or Console__IsOpen) then return end
-	if (ChangingKey) then
-		if (message == KEY_DOWN) then
-			if (ChangingKeyMenu) then return end
-			ChangingKey = false
-			if (ChangingKeyVariable == nil) then
-				if (key == 46) then
-					PrintLocal("Cannot set delete as the menu key!", true)
-				else
-					MenuKey = key
-					SaveMenu()
-				end
-			else
-				ChangingKeyInstance._param[ChangingKeyVariable].key = key
-				ChangingKeyInstance:save()
-			end
-			return
-		elseif (ChangingKeyMenu and (key == MenuKey)) then
-			ChangingKeyMenu = false
-		end
-	end
-	if ((message == WM_LBUTTONDOWN) and IsKeyDown(MenuKey)) then
-		if (CursorIsUnder(Draw.x + Draw.Padding + Draw.Width - (Draw.Padding * 2) - 2 - Draw.DetailWidth, Draw.y + Draw.Padding + 2, Draw.DetailWidth, Draw.HeaderHeight - 4)) then
-			ChangingKey = true
-			ChangingKeyVariable = nil
-			ChangingKeyMenu = true
-			return
-		elseif (CursorIsUnder(Draw.x + Draw.Padding + 1, Draw.y + Draw.Padding + 1, Draw.Width - (Draw.Padding * 2) - 2, Draw.HeaderHeight - (Draw.Padding * 2) - 2)) then
-			StartMoveWithMouse()
-		else
-			if (MenuIndex) then
-				if (MenuIndex == 0) then
-					if (CursorIsUnder(SelectorConfig._x + Draw.Padding + 1, Draw.y, Draw.Width - (Draw.Padding * 2) - 2, Draw.HeaderHeight)) then
-						StartMoveWithMouse()
-						return
-					else
-						for i = 1, #SelectorConfig._subInstances do
-							if (CursorIsUnder(SelectorConfig._subInstances[i]._x + Draw.Padding + 1, Draw.y, Draw.Width - (Draw.Padding * 2) - 2, Draw.HeaderHeight)) then
-								StartMoveWithMouse()
-								return
-							end
-						end
-					end
-					CheckOnWndMsg(SelectorConfig)
-				else
-					local function CheckForMove(instance)
-						if (CursorIsUnder(instance._x + Draw.Padding + 1, Draw.y, Draw.Width - (Draw.Padding * 2) - 2, Draw.HeaderHeight)) then
-							StartMoveWithMouse()
-							return true
-						elseif (#instance._subInstances > 0) then
-							for i = 1, #instance._subInstances do
-								if (CheckForMove(instance._subInstances[i])) then
-									return true
-								end
-							end
-						end
-						return false
-					end
-					if (CheckForMove(Instances[MenuIndex])) then return end
-					CheckOnWndMsg(Instances[MenuIndex])
-				end
-			end
-			if (SelectorConfig and CursorIsUnder(Draw.x, SelectorConfig._y1, Draw.Width, Draw.CellHeight)) then
-				if (MenuIndex == 0) then
-					SelectorConfig:ResetSubIndexes()
-					MenuIndex = nil
-				else
-					if (MenuIndex) then
-						Instances[MenuIndex]:ResetSubIndexes()
-					end
-					MenuIndex = 0
-				end
-			end
-			for i = 1, #Instances do
-				if (CursorIsUnder(Draw.x, Instances[i]._y1, Draw.Width, Draw.CellHeight)) then
-					if (MenuIndex and (i == MenuIndex)) then
-						Instances[MenuIndex]:ResetSubIndexes()
-						MenuIndex = nil
-					else
-						if (MenuIndex) then
-							if (MenuIndex == 0) then
-								SelectorConfig:ResetSubIndexes()
-							else
-								Instances[MenuIndex]:ResetSubIndexes()
-							end
-						end
-						MenuIndex = i
-					end
-					break
-				end
-			end
-		end
-	elseif (message == WM_LBUTTONUP) then
-		if (Moving) then
-			Moving = false
-			return
-		elseif (SliceInstance) then
-			SliceInstance:save()
-			SliceInstance._slice = false
-			SliceInstance = false
-			return
-		elseif (ListInstance) then
-			ListInstance:save()
-			ListInstance._list = false
-			ListInstance = false
-		end
-	elseif (key ~= 46) then
-		for i = 1, #Instances do
-			CheckForWndMsg(message, key, Instances[i])
-		end
-	end
-end
-
-function CheckOnWndMsg(instance)
-	if (CursorIsUnder(instance._x, Draw.y, Draw.Width, instance._height)) then
-		instance:OnWndMsg()
-	elseif (instance._subMenuIndex > 0) then
-		CheckOnWndMsg(instance._subInstances[instance._subMenuIndex])
-	end
-end
-function CheckForWndMsg(message, key, instance)
-	for i = 1, #instance._param do
-		local param = instance._param[i]
-		if ((param.pType == SCRIPT_PARAM_ONKEYTOGGLE) and (key == param.key) and (message == KEY_DOWN)) then
-			instance[param.var] = not instance[param.var]
-		elseif ((param.pType == SCRIPT_PARAM_ONKEYDOWN) and (key == param.key)) then
-			instance[param.var] = (message == KEY_DOWN)
-		end
-	end
-	for i = 1, #instance._subInstances do
-		CheckForWndMsg(message, key, instance._subInstances[i])
-	end
-end
-
-function DrawMainHeaderSprite()
-	local padding = Draw.Padding + 1
-	local moveWidth = Draw.Width - (Draw.Padding * 2) - 2
-	local moveHeight = Draw.HeaderHeight - (Draw.Padding * 2) - 2
-	local text = ChangingKey and not ChangingKeyVariable and "Press new key for menu..." or "脚本设置"
-	local keyx = Draw.x + Draw.Padding + moveWidth - Draw.DetailWidth
-	local keyy = Draw.y + Draw.Padding + 2
-	local fullHeight = Draw.HeaderHeight + ((Draw.CellHeight - 1) * #Instances) + (SelectorConfig and (Draw.CellHeight - 1) or 0)
-	DrawRectangle(Draw.x, Draw.y, Draw.Width, fullHeight, ARGB(Draw.Opacity, Colors.Gray[1], Colors.Gray[2], Colors.Gray[3]))
-	--DrawRectangle(Draw.x + 1, Draw.y + 1, Draw.Width - 2, Draw.HeaderHeight - 2, Background)
-	--DrawRectangle(Draw.x + padding, Draw.y + padding, moveWidth, moveHeight, FontColor)
-	--DrawRectangle(Draw.x + padding + 1, Draw.y + padding + 1, moveWidth - 2, moveHeight - 2, Foreground)
-	DrawTextA(text, Draw.FontSize, Draw.x + padding , Draw.y + padding + (moveHeight / 2), FontColor, "left", "center")
-	DrawRectangle(keyx, keyy, Draw.DetailWidth, moveHeight - 2, ARGB(Draw.Opacity, Colors.Gray[1], Colors.Gray[2], Colors.Gray[3]))
-	--DrawLines2({ D3DXVECTOR2(keyx - 1, keyy), D3DXVECTOR2(keyx - 1, keyy + Draw.HeaderHeight - 4 - (Draw.Padding * 2)) }, 1, FontColor)
-	DrawTextA("("..GetKeyAsString(MenuKey)..")", Draw.FontSize, keyx + (Draw.DetailWidth / 2), keyy + ((moveHeight - 2) / 2), FontColor, "center", "center")
-end
-function DrawMenuSprite(x, y, header, selected)
-	--DrawRectangle(x, y, Draw.Width, Draw.CellHeight, LightGray)
-    --print("UsedDrawMenu!header =",header)
-    local  newheader
-    if(header ~= nil and header ~= "") then            
-        --print("header text:",header)
-        newheader = translationchk(header) 
-        else
-        newheader = header
-        end
-	DrawRectangle(x + 1, y + 1, Draw.Width - 2, Draw.CellHeight - 2, selected and Foreground or Background)
-	DrawTextA(newheader, Draw.FontSize, x + (Draw.Padding * 2), y + (Draw.CellHeight / 2), selected and White or FontColor, nil, "center")
-	DrawTextA(">>", Draw.FontSize, x + Draw.Width - (Draw.Padding * 2), y + (Draw.CellHeight / 2), selected and White or FontColor, "right", "center")
-end
-function DrawHeaderSprite(x, y, header, items)
-	local moveWidth = Draw.Width - (Draw.Padding * 2) - 2
-	local moveHeight = Draw.HeaderHeight - (Draw.Padding * 2) - 2
-	local movex = x + Draw.Padding + 1
-	local movey = y + Draw.Padding + 1
-	local fullHeight = Draw.HeaderHeight + ((Draw.CellHeight - 1) * items)
-    --print("UsedDrawHeader!header =",header)
-	DrawRectangle(x, y, Draw.Width, fullHeight, ARGB(Draw.Opacity, Colors.Gray[1], Colors.Gray[2], Colors.Gray[3]))
-	--DrawRectangle(x + 1, y + 1, Draw.Width - 2, Draw.HeaderHeight - 2, Background)
-	--DrawRectangle(movex, movey, moveWidth, moveHeight, FontColor)
-	--DrawRectangle(movex + 1, movey + 1, moveWidth - 2, moveHeight - 2, Foreground)
-    local  newheader
-    if(header ~= nil and header ~= "") then            
-        --print("header text:",header)
-        newheader = translationchk(header) 
-        else
-        newheader = header
-        end
-	DrawTextA(newheader, Draw.FontSize, movex + (moveWidth / 2), movey + (moveHeight / 2), FontColor, "center", "center")
-end
-function DrawToggleSprite(x, y, text, active)
-   -- print("UsedToggleSprite!text=",text)
-	local buttonx = x + Draw.Row3 - 1
-	local buttony = y + 1
-	--DrawRectangle(x, y, Draw.Width, Draw.CellHeight, FontColor)
-	DrawRectangle(x + 1, y + 1, Draw.Width - 2, Draw.CellHeight - 2, Background)
-    --print("In drawtoggle text=",text)
-	DrawTextA(text, Draw.FontSize, x + (Draw.Padding * 2), y + (Draw.CellHeight / 2), FontColor, nil, "center")
-	--DrawLines2({ D3DXVECTOR2(x + Draw.Row3 - 2, y + 1), D3DXVECTOR2(x + Draw.Row3 - 2, y + Draw.CellHeight) }, 1, FontColor)
-	DrawRectangle(buttonx, buttony, Draw.Width - Draw.Row3, Draw.CellHeight - 2, active and DarkGreen or DarkRed)
-	DrawTextA(active and "ON" or "OFF", Draw.FontSize, buttonx + ((Draw.Width - Draw.Row3) / 2) + Draw.Padding, buttony + (Draw.CellHeight / 2), LightGray, "center", "center")
-end
-function DrawInfoSprite(x, y, text, info)
-    local info = info and ((type(info) == "number") and tostring(info)) or info
-	--DrawRectangle(x, y, Draw.Width, Draw.CellHeight, FontColor)
-	DrawRectangle(x + 1, y + 1, Draw.Width - 2, Draw.CellHeight - 2, Background)
-     --print("UsedDrawInfo!text =",text)
-	DrawTextA(text, Draw.FontSize, x + (Draw.Padding * 2), y + (Draw.CellHeight / 2), FontColor, nil, "center")
-	if (info and (info:len() > 0)) then
-		--DrawLines2({ D3DXVECTOR2(x + Draw.Row3 - 2, y + 1), D3DXVECTOR2(x + Draw.Row3 - 2, y + Draw.CellHeight) }, 1, FontColor)
-		DrawRectangle(x + Draw.Row3 - 1, y + 1, Draw.Width - Draw.Row3, Draw.CellHeight - 2, Foreground)
-		DrawTextA(info, Draw.FontSize, x + Draw.Row3 - 1 + ((Draw.Width - Draw.Row3) / 2), y + 1 + ((Draw.CellHeight - 2) / 2), FontColor, "center", "center")
-	end
-end
-function DrawColorSprite(x, y, text, color)
-	--DrawRectangle(x, y, Draw.Width, Draw.CellHeight, FontColor)
-	DrawRectangle(x + 1, y + 1, Draw.Width - 2, Draw.CellHeight - 2, Background)
-	DrawTextA(text, Draw.FontSize, x + (Draw.Padding * 2), y + (Draw.CellHeight / 2), FontColor, nil, "center")
-	--DrawLines2({ D3DXVECTOR2(x + Draw.Row3 - 2, y + 1), D3DXVECTOR2(x + Draw.Row3 - 2, y + Draw.CellHeight) }, 1, FontColor)
-	DrawRectangle(x + Draw.Row3 - 1, y + 1, Draw.Width - Draw.Row3, Draw.CellHeight - 2, ARGB(Draw.ColorOpacity, color[2], color[3], color[4]))
-end
-function DrawKeyToggleSprite(x, y, text, active, key)
-	local buttonWidth = Draw.Width - Draw.Row3
-	local keyx = x + Draw.Width - buttonWidth - Draw.DetailWidth - 2
-	local keyy = y + 1
-	DrawToggleSprite(x, y, text, active)
-	--DrawLines2({ D3DXVECTOR2(x + Draw.Width - buttonWidth - Draw.DetailWidth - 3, y + 1), D3DXVECTOR2(x + Draw.Width - buttonWidth - Draw.DetailWidth - 3, y + Draw.CellHeight - 1) }, 1, FontColor)
-	DrawRectangle(keyx, keyy, Draw.DetailWidth, Draw.CellHeight - 2, ARGB(Draw.Opacity, Colors.Gray[1], Colors.Gray[2], Colors.Gray[3]))
-	DrawTextA("("..GetKeyAsString(key)..")", Draw.FontSize, keyx + (Draw.DetailWidth / 2), keyy + ((Draw.CellHeight - 2) / 2), FontColor, "center", "center")
-end
-function DrawSliderSprite(x, y, text, value, cursor)
-	local valuex = x + Draw.Width - (Draw.Width - Draw.Row3) - Draw.DetailWidth - 2
-	local valuey = y + 1
-	local sliderx = x + Draw.Row3 - 1
-	local slidery = y + 1
-	--DrawRectangle(x, y, Draw.Width, Draw.CellHeight, FontColor)
-	DrawRectangle(x + 1, y + 1, Draw.Width - 2, Draw.CellHeight - 2, Background)
-	DrawTextA(text, Draw.FontSize, x + (Draw.Padding * 2), y + (Draw.CellHeight / 2), FontColor, nil, "center")
-	--DrawLines2({ D3DXVECTOR2(x + Draw.Width - (Draw.Width - Draw.Row3) - Draw.DetailWidth - 3, y + 1), D3DXVECTOR2(x + Draw.Width - (Draw.Width - Draw.Row3) - Draw.DetailWidth - 3, y + Draw.CellHeight - 1) }, 1, FontColor)
-	DrawRectangle(valuex, valuey, Draw.DetailWidth, Draw.CellHeight - 2, ARGB(Draw.Opacity, Colors.Gray[1], Colors.Gray[2], Colors.Gray[3]))
-	DrawTextA(tostring(value), Draw.FontSize, valuex + (Draw.DetailWidth / 2), valuey + ((Draw.CellHeight - 2) / 2), FontColor, "center", "center")
-	--DrawLines2({ D3DXVECTOR2(x + Draw.Row3 - 2, y + 1), D3DXVECTOR2(x + Draw.Row3 - 2, y + Draw.CellHeight) }, 1, FontColor)
-	DrawRectangle(sliderx, slidery, Draw.Width - Draw.Row3, Draw.CellHeight - 2, Foreground)
-	DrawLines2({ D3DXVECTOR2(sliderx + (Draw.Padding * 2), slidery + ((Draw.CellHeight - 2) / 2)), D3DXVECTOR2(x + Draw.Width - (Draw.Padding * 2) - 2, slidery + ((Draw.CellHeight - 2) / 2)) }, 4, ARGB(200, Colors.Background[1], Colors.Background[2], Colors.Background[3]))
-	DrawLines2({ D3DXVECTOR2(sliderx + (Draw.Padding * 2) + cursor, slidery + ((Draw.CellHeight - 2) / 2) - (Draw.Padding * 2)), D3DXVECTOR2(sliderx + (Draw.Padding * 2) + cursor, slidery + ((Draw.CellHeight - 2) / 2) + (Draw.Padding * 2)) }, 4, FontColor)
-end
-function DrawListSprite(x, y, text, currentOption)
-    local optionsx = x + Draw.Row3 - 1
-	local optionsy = y + 1
-	--DrawRectangle(x, y, Draw.Width, Draw.CellHeight, FontColor)
-    --print("UsedDrawList!text =",text)
-	--DrawRectangle(x + 1, y + 1, Draw.Width - 2, Draw.CellHeight - 2, Background)
-	DrawTextA(text, Draw.FontSize, x + (Draw.Padding * 2), y + (Draw.CellHeight / 2), FontColor, nil, "center")
-	--DrawLines2({ D3DXVECTOR2(x + Draw.Row3 - 2, y + 1), D3DXVECTOR2(x + Draw.Row3 - 2, y + Draw.CellHeight) }, 1, FontColor)
-	DrawRectangle(optionsx, optionsy, Draw.Width - Draw.Row3, Draw.CellHeight - 2, Foreground)
-	local text = translationchk(currentOption)
-	local maxWidth = (Draw.Width - Draw.Row3) * 0.8
-	local textWidth = GetTextArea(text, Draw.FontSize).x
-	if (textWidth > maxWidth) then
-		text = text:sub(1, math.floor(text:len() * maxWidth / textWidth))
-		if (text:sub(text:len(), text:len()) == " ") then
-			text = text:sub(1, text:len() - 1)
-		end
-		text = text.."..."
-	end
-	DrawTextA(text, Draw.FontSize, optionsx + ((Draw.Width - Draw.Row3) / 2), optionsy + ((Draw.CellHeight - 2) / 2), FontColor, "center", "center")
-end
-function DrawListDropDownSprite(x, y, index, listTable)
-	local width = 0
-	local height = 1
-    --print("UsedDrawListDropDown!text =",text)
-	for i = 1, #listTable do
-		width = math.max(width, GetTextArea(listTable[i], Draw.FontSize).x)
-		height = height + Draw.CellHeight - 1
-	end
-	width = width + (Draw.Padding * 6)
-	--DrawRectangle(x, y, width, height, FontColor)
-	DrawRectangle(x + 1, y + 1, width - 2, height - 2, Background)
-	for i = 1, #listTable do
-		local optiony = y + 1 + ((Draw.CellHeight - 1) * (i - 1))
-        local trtext = translationchk(listTable[i])
-		DrawRectangle(x + 1, optiony, width - 2, Draw.CellHeight - 2, (index == i) and ARGB(200, 255, 0, 0) or Background)
-		DrawTextA(trtext, Draw.FontSize, x + (Draw.Padding * 2), optiony + ((Draw.CellHeight - 2) / 2), FontColor, nil, "center")
-		if (i < #listTable) then
-			--DrawLines2({ D3DXVECTOR2(x + 1, optiony + Draw.CellHeight - 2), D3DXVECTOR2(x + width - 1, optiony + Draw.CellHeight - 2) }, 1, FontColor)
-		end
-	end
 end
 
 function _G.scriptConfig:__init(header, name, parent)
-	if (parent) then
-		self._parent = parent
-	else
-		InitializeConfig(name)
-		LoadConfig()
-	end
-	self.header = header
-	self.name = name
-    --print("configheader:",header)
-    --WriteFile(('["'.. header ..'"]'.. ' = '.. '" ",').."\n", SCRIPT_PATH .. "results.txt","a")
-    --translateheaderchk(header)
-	self._param = { }
-	self._subInstances = { }
-	self._tsInstances = { }
-    self._permaShow = { }
-	self._sprite1 = nil
-	self._sprite2 = nil
-	self._subMenuIndex = 0
-	self._list = 0
-	self._x = parent and (parent._x + Draw.Width) or Draw.x + Draw.Width
-	self._y = 0
-	self._y1 = 0
-	self._height = Draw.HeaderHeight
+    assert((type(header) == "string") and (type(name) == "string"), "scriptConfig: expected <string>, <string>)")
+    if not parent then
+        __SC__init(name)
+        __SC__OnLoad()
+    else
+        self._parent = parent
+    end
+    self.header = header
+    self.name = name
+    self._tsInstances = {}
+    self._param = {}
+    self._permaShow = {}
+    self._subInstances = {}
+    self._subMenuIndex = 0
+    self._x = parent and (parent._x + _SC.draw.width + _SC.draw.border*2) or _SC._Idraw.x
+    self._y = 0
+    self._height = 0
     self._slice = false
-	if (parent) then
-		parent._subInstances[#parent._subInstances + 1] = self
-	elseif (name ~= "MainTargetSelector") then
-		Instances[#Instances + 1] = self
-	end
+    table.insert(parent and parent._subInstances or _SC.instances, self)
+end
+
+function _G.scriptConfig:addSubMenu(header, name)
+    assert((type(header) == "string") and (type(name) == "string"), "scriptConfig: expected <string>, <string>)")
+    local subName = self.name .. "_" .. name
+    local sub = scriptConfig(header, subName, self)
+    self[name] = sub
+end
+
+function _G.scriptConfig:addParam(pVar, pText, pType, defaultValue, a, b, c)
+    assert(type(pVar) == "string" and type(pText) == "string" and type(pType) == "number", "addParam: wrong argument types (<string>, <string>, <pType> expected)")
+    assert(string.find(pVar, "[^%a%d]") == nil, "addParam: pVar should contain only char and number")
+    --assert(self[pVar] == nil, "addParam: pVar should be unique, already existing " .. pVar)
+    local newParam = { var = pVar, text = pText, pType = pType }
+    if pType == SCRIPT_PARAM_ONOFF then
+        assert(type(defaultValue) == "boolean", "addParam: wrong argument types (<boolean> expected)")
+    elseif pType == SCRIPT_PARAM_COLOR then
+        assert(type(defaultValue) == "table", "addParam: wrong argument types (<table> expected)")
+        assert(#defaultValue == 4, "addParam: wrong argument ({a,r,g,b} expected)")
+    elseif pType == SCRIPT_PARAM_ONKEYDOWN or pType == SCRIPT_PARAM_ONKEYTOGGLE then
+        assert(type(defaultValue) == "boolean" and type(a) == "number", "addParam: wrong argument types (<boolean> <number> expected)")
+        newParam.key = a
+    elseif pType == SCRIPT_PARAM_SLICE then
+        assert(type(defaultValue) == "number" and type(a) == "number" and type(b) == "number" and (type(c) == "number" or c == nil), "addParam: wrong argument types (pVar, pText, pType, defaultValue, valMin, valMax, decimal) expected")
+        newParam.min = a
+        newParam.max = b
+        newParam.idc = c or 0
+        newParam.cursor = 0
+    elseif pType == SCRIPT_PARAM_LIST then
+        assert(type(defaultValue) == "number" and type(a) == "table", "addParam: wrong argument types (pVar, pText, pType, defaultValue, listTable) expected")
+        newParam.listTable = a
+        newParam.min = 1
+        newParam.max = #a
+        newParam.cursor = 0
+    end
+    self[pVar] = defaultValue
+    table.insert(self._param, newParam)
+    __SC__saveMaster()
+    self:load()
+end
+
+function _G.scriptConfig:addTS(tsInstance)
+    assert(type(tsInstance.mode) == "number", "addTS: expected TargetSelector)")
+    _SC.useTS = true
+    table.insert(self._tsInstances, tsInstance)
+    __SC__saveMaster()
+    self:load()
+end
+
+function _G.scriptConfig:permaShow(pVar)
+    assert(type(pVar) == "string" and self[pVar] ~= nil, "permaShow: existing pVar expected)")
+    for index, param in ipairs(self._param) do
+        if param.var == pVar then
+            table.insert(self._permaShow, index)
+        end
+    end
+    __SC__saveMaster()
+end
+
+function _G.scriptConfig:_txtKey(key)
+    return (key > 32 and key < 96 and " " .. string.char(key) .. " " or "(" .. tostring(key) .. ")")
 end
 
 function _G.scriptConfig:OnDraw()
-	self._x = (self._parent and (self._parent._x + Draw.Width) or Draw.x + Draw.Width) - 1
-	if (self._slice and SliceInstance) then
-		local cursorX = math.min(math.max(0, GetCursorPos().x - self._x - Draw.Row3), Draw.Width - Draw.Row3)
-		self[self._param[self._slice].var] = math.round(self._param[self._slice].min + cursorX / (Draw.Width - Draw.Row3) * (self._param[self._slice].max - self._param[self._slice].min), self._param[self._slice].idc)
-	end
-	self._y = Draw.y
-	DrawHeaderSprite(self._x, self._y, ChangingKey and ChangingKeyVariable and ChangingKeyInstance and (ChangingKeyInstance.name == self.name) and "Press new key for: "..self._param[ChangingKeyVariable].text or self.header, #self._subInstances + #self._param)
-	self._y = self._y + Draw.HeaderHeight - 1
-	for i = 1, #self._subInstances do
-		local variable = self._subInstances[i].name
-		local selected = (self._subMenuIndex == i)
-		self._subInstances[i]._y1 = self._y
-            --print("self subinstances:",self._subInstances[i])
-		DrawMenuSprite(self._x, self._y, self._subInstances[i].header, selected)
-		self._y = self._y + Draw.CellHeight - 1
-		if (selected) then
-			self._subInstances[i]:OnDraw()
-		end
-	end
-	for i = 1, #self._param do
-		self._param[i]._y1 = self._y
-		local var = self[self._param[i].var]
-        local trantext
-        --print("start to draw param:",self._param[i].text)
-        if(self._param[i].text ~= nil and self._param[i].text ~= "") then            
-        --print("self param text:",self._param[i].text)
-        trantext = translationchk(self._param[i].text) 
-        else
-        trantext = self._param[i].text
-        end
-        --print(self._param)
-        --[[if(type(self._param[i].listTable) ~= nil and self._param[i].listTable ~= nil) then
-        print(self._param[i].listTable[var])
-        end]]--
-		if (self._param[i].pType == SCRIPT_PARAM_ONOFF) then
-			DrawToggleSprite(self._x, self._y, trantext, var)
-		elseif (self._param[i].pType == SCRIPT_PARAM_INFO) then
-            DrawInfoSprite(self._x, self._y, trantext, var)
-		elseif (self._param[i].pType == SCRIPT_PARAM_COLOR) then
-			DrawColorSprite(self._x, self._y, trantext, var)
-		elseif (self._param[i].pType == SCRIPT_PARAM_SLICE) then
-			self._param[i].cursor = (var - self._param[i].min) / (self._param[i].max - self._param[i].min) * ((Draw.Width - Draw.Row3) - (Draw.Padding * 4))
-            --print(self._param[i].cursor)
-			DrawSliderSprite(self._x, self._y, trantext, var, self._param[i].cursor)
-		elseif ((self._param[i].pType == SCRIPT_PARAM_ONKEYDOWN) or (self._param[i].pType == SCRIPT_PARAM_ONKEYTOGGLE)) then
-			DrawKeyToggleSprite(self._x, self._y, trantext, var, self._param[i].key)
-		elseif (self._param[i].pType == SCRIPT_PARAM_LIST) then
-			DrawListSprite(self._x, self._y, trantext, self._param[i].listTable[var])
-			if (i == self._list) then
-				local cursorY = math.min(GetCursorPos().y - self._y, Draw.CellHeight * (self._param[i].max))
-				if (cursorY >= 0) then
-					self[self._param[i].var] = math.min(math.round(self._param[i].min + cursorY / ((Draw.CellHeight - 4) * (self._param[i].max)) * (self._param[i].max - self._param[i].min)), #self._param[i].listTable)
-				end
-				DrawListDropDownSprite(self._x + Draw.Width - 1, self._y, self[self._param[i].var], self._param[i].listTable)
-			end
-		else
-			PrintLocal("Unable to draw param type '"..self._param[i].pType.."'!", true)
-		end
-		self._y = self._y + Draw.CellHeight - 1
-	end
-	self._height = self._y - Draw.y
-end
-function _G.scriptConfig:OnWndMsg()
-	for i = 1, #self._subInstances do
-		if (CursorIsUnder(self._x, self._subInstances[i]._y1, Draw.Width, Draw.CellHeight)) then
-			if (i == self._subMenuIndex) then
-				self._subMenuIndex = 0
-			else
-				self._subMenuIndex = i
-			end
-			return
-		end
-	end
-	for i = 1, #self._param do
-		local param = self._param[i]
-		if ((param.pType == SCRIPT_PARAM_ONKEYDOWN) or (param.pType == SCRIPT_PARAM_ONKEYTOGGLE)) then
-			if (CursorIsUnder(self._x + Draw.Width - (Draw.Width - Draw.Row3) - Draw.DetailWidth - 2, param._y1, Draw.Width, Draw.CellHeight)) then
-				ChangingKey = true
-				ChangingKeyVariable = i
-				ChangingKeyMenu = true
-				ChangingKeyInstance = self
-				self:ResetSubIndexes()
-				return
-			end
-		end
-		if (not changed and ((param.pType == SCRIPT_PARAM_ONOFF) or (param.pType == SCRIPT_PARAM_ONKEYTOGGLE))) then
-			if (CursorIsUnder(self._x + Draw.Row3 - 1, param._y1, Draw.Width, Draw.CellHeight)) then
-				self[param.var] = not self[param.var]
-				self:save()
-				self:ResetSubIndexes()
-				return
-			end
-		end
-		if (not changed and (param.pType == SCRIPT_PARAM_SLICE)) then
-			if (CursorIsUnder(self._x + Draw.Row3 - 1, param._y1, Draw.Width, Draw.CellHeight)) then
-				self._slice = i
-				SliceInstance = self
-				self:ResetSubIndexes()
-				return
-			end
-		end
-		if (not changed and (param.pType == SCRIPT_PARAM_LIST)) then
-			if (CursorIsUnder(self._x + Draw.Row3 - 1, param._y1, Draw.Width, Draw.CellHeight)) then
-				self._list = i
-				ListInstance = self
-				self:ResetSubIndexes()
-				return
-			end
-		end
-		if (not changed and (param.pType == SCRIPT_PARAM_COLOR)) then
-			if (CursorIsUnder(self._x + Draw.Row3 - 1, param._y1, Draw.Width, Draw.CellHeight)) then
-				__CP(nil, nil, self[param.var][1], self[param.var][2], self[param.var][3], self[param.var][4], self[param.var])
-				self:save()
-				self:ResetSubIndexes()
-			end
-		end
-	end
-end
-function _G.scriptConfig:addParam(variable, text, ptype, value, param1, param2, param3)
-	local newParam = {
-		var = variable,
-		text = text,
-		pType = ptype,
-		_y1 = self._y,
-	}
-    --print("param text:",text)
-    --[[if(text ~= "") then
-    WriteFile(('["'.. text ..'"]'.. ' = '.. '" ",').."\n", SCRIPT_PATH .. "results.txt","a")
-    end]]--
-	if ((ptype == SCRIPT_PARAM_ONKEYDOWN) or (ptype == SCRIPT_PARAM_ONKEYTOGGLE)) then
-        newParam.key = param1
-    elseif (ptype == SCRIPT_PARAM_SLICE) then
-        newParam.min = param1
-        newParam.max = param2
-        newParam.idc = param3 or 0
-        newParam.cursor = 0
-    elseif (ptype == SCRIPT_PARAM_LIST) then
-        
-        --[[for i,v in pairs(param1) do
-            print("param list:",param1)
-            WriteFile(('["'.. v ..'"]'.. ' = '.. '" ",').."\n", SCRIPT_PATH .. "results.txt","a")
-        end]]--
+    self._x = self._parent and (self._parent._x + _SC.draw.width + _SC.draw.border*2) or _SC._Idraw.x
+    if self._slice and _SC._sliceInstance then
+        local cursorX = math.min(math.max(0, GetCursorPos().x - self._x - _SC.draw.row3), _SC.draw.width - _SC.draw.row3)
+        self[self._param[self._slice].var] = math.round(self._param[self._slice].min + cursorX / (_SC.draw.width - _SC.draw.row3) * (self._param[self._slice].max - self._param[self._slice].min), self._param[self._slice].idc)
+    end
+    self._y = _SC.draw.y
+    DrawLine(self._x + _SC.draw.width / 2, self._y, self._x + _SC.draw.width / 2, self._y + self._height, _SC.draw.width + _SC.draw.border * 2, 1414812756) -- grey
+    local menuText = _SC._changeKey and _SC._changeKeyVar and _SC._changeKeyInstance and _SC._changeKeyInstance.name == self.name and "press key for " .. self._param[_SC._changeKeyVar].var or self.header
+    DrawText(translationchk(menuText), _SC.draw.fontSize, self._x, self._y, 4294967280) -- ivory
+    self._y = self._y + _SC.draw.cellSize
+    for index, _ in ipairs(self._subInstances) do
+        self:_DrawSubInstance(index)
+        if self._subMenuIndex == index then _:OnDraw() end
+    end
 
-        newParam.listTable = param1
-        newParam.min = 1
-        newParam.max = #param1
-        newParam.cursor = 0
-	end
-	local index = #self._param + 1
-    self[variable] = value
-	self._param[index] = newParam
-	self._height = self._height + Draw.CellHeight
-    SaveMaster()
-	self:load()
-end
-function _G.scriptConfig:load()
-    local config = LoadSettings(self.name)
-    for var, value in pairs(config) do
-        if (type(value) == "table") then
-            if (self[var]) then
-				self[var] = SensitiveMerge(self[var], value)
-			end
-        else
-			self[var] = value
+    if #self._tsInstances > 0 then
+        --_SC._Idraw.y = TS__DrawMenu(_SC._Idraw.x, _SC._Idraw.y)
+        for _, tsInstance in ipairs(self._tsInstances) do
+            self._y = tsInstance:DrawMenu(self._x, self._y)
+        end
+    end
+    for index, _ in ipairs(self._param) do
+        self:_DrawParam(index)
+    end
+    self._height = self._y - _SC.draw.y
+    if self._list and _SC._listInstance and self._listY then
+        local cursorY = math.min(GetCursorPos().y - self._listY, _SC.draw.cellSize * (self._param[self._list].max))
+        if cursorY >= 0 then
+            self[self._param[self._list].var] = math.round(self._param[self._list].min + cursorY / (_SC.draw.cellSize * (self._param[self._list].max)) * (self._param[self._list].max - self._param[self._list].min))
+        end
+        local maxWidth = 0
+        for i, el in pairs(self._param[self._list].listTable) do
+            maxWidth = math.max(maxWidth, GetTextArea(el, _SC.draw.fontSize).x)
+        end
+        -- BG:
+        DrawRectangle(self._x + _SC.draw.row3, self._listY, maxWidth, self._param[self._list].max * _SC.draw.cellSize, ARGB(230,50,50,50))
+        -- SELECTED:
+        DrawRectangle(self._x + _SC.draw.row3, self._listY + (self[self._param[self._list].var]-1) * _SC.draw.cellSize, maxWidth, _SC.draw.cellSize, _SC.color.green)
+        for i, el in pairs(self._param[self._list].listTable) do
+            DrawText(translationchk(el), _SC.draw.fontSize, self._x + _SC.draw.row3, self._listY + (i-1) * _SC.draw.cellSize, 4294967280)
         end
     end
 end
-function _G.scriptConfig:save()
-    local content = { }
-    content._param = content._param or { }
-	for i = 1, #self._param do
-		local param = self._param[i]
-        if (param.pType ~= SCRIPT_PARAM_INFO) then
-            content[param.var] = self[param.var]
-            if ((param.pType == SCRIPT_PARAM_ONKEYDOWN) or (param.pType == SCRIPT_PARAM_ONKEYTOGGLE)) then
-                content._param[i] = { key = param.key }
+
+function _G.scriptConfig:_DrawSubInstance(index)
+    local pVar = self._subInstances[index].name
+    local selected = self._subMenuIndex == index
+    DrawLine(self._x - _SC.draw.border, self._y + _SC.draw.midSize, self._x + _SC.draw.width + _SC.draw.border, self._y + _SC.draw.midSize, _SC.draw.cellSize, (selected and _SC.color.red or _SC.color.lgrey))
+    DrawText(translationchk(self._subInstances[index].header), _SC.draw.fontSize, self._x, self._y, (selected and _SC.color.ivory or _SC.color.grey))
+    DrawText("        >>", _SC.draw.fontSize, self._x + _SC.draw.row3 , self._y, (selected and _SC.color.ivory or _SC.color.grey))
+    --_SC._Idraw.y = _SC._Idraw.y + _SC.draw.cellSize
+    self._y = self._y + _SC.draw.cellSize
+end
+
+function _G.scriptConfig:_DrawParam(varIndex)
+    local pVar = self._param[varIndex].var
+    DrawLine(self._x - _SC.draw.border, self._y + _SC.draw.midSize, self._x + _SC.draw.row3 - _SC.draw.border, self._y + _SC.draw.midSize, _SC.draw.cellSize, _SC.color.lgrey)
+    DrawText(translationchk(self._param[varIndex].text), _SC.draw.fontSize, self._x, self._y, _SC.color.grey)
+    if self._param[varIndex].pType == SCRIPT_PARAM_SLICE then
+        DrawText(translationchk(tostring(self[pVar])), _SC.draw.fontSize, self._x + _SC.draw.row2, self._y, _SC.color.grey)
+        DrawLine(self._x + _SC.draw.row3, self._y + _SC.draw.midSize, self._x + _SC.draw.width + _SC.draw.border, self._y + _SC.draw.midSize, _SC.draw.cellSize, _SC.color.lgrey)
+        -- cursor
+        self._param[varIndex].cursor = (self[pVar] - self._param[varIndex].min) / (self._param[varIndex].max - self._param[varIndex].min) * (_SC.draw.width - _SC.draw.row3)
+        DrawLine(self._x + _SC.draw.row3 + self._param[varIndex].cursor - _SC.draw.border, self._y + _SC.draw.midSize, self._x + _SC.draw.row3 + self._param[varIndex].cursor + _SC.draw.border, self._y + _SC.draw.midSize, _SC.draw.cellSize, 4292598640)
+    elseif self._param[varIndex].pType == SCRIPT_PARAM_LIST then
+        local text = translationchk(tostring(self._param[varIndex].listTable[self[pVar]]))
+        local maxWidth = (_SC.draw.width - _SC.draw.row3) * 0.8
+        local textWidth = GetTextArea(text, _SC.draw.fontSize).x
+        if textWidth > maxWidth then
+            text = text:sub(1, math.floor(text:len() * maxWidth / textWidth)) .. ".."
+        end
+        DrawText(text, _SC.draw.fontSize, self._x + _SC.draw.row3, self._y, _SC.color.grey)
+        if self._list and _SC._listInstance then self._listY = self._y + _SC.draw.cellSize end
+    elseif self._param[varIndex].pType == SCRIPT_PARAM_INFO then
+        DrawText(translationchk(tostring(self[pVar])), _SC.draw.fontSize, self._x + _SC.draw.row3 + _SC.draw.border, self._y, _SC.color.grey)
+    elseif self._param[varIndex].pType == SCRIPT_PARAM_COLOR then
+        DrawRectangle(self._x + _SC.draw.row3 + _SC.draw.border, self._y, 80, _SC.draw.cellSize, ARGB(self[pVar][1], self[pVar][2], self[pVar][3], self[pVar][4]))
+    else
+        if (self._param[varIndex].pType == SCRIPT_PARAM_ONKEYDOWN or self._param[varIndex].pType == SCRIPT_PARAM_ONKEYTOGGLE) then
+            DrawText(self:_txtKey(self._param[varIndex].key), _SC.draw.fontSize, self._x + _SC.draw.row2, self._y, _SC.color.grey)
+        end
+        DrawLine(self._x + _SC.draw.row3, self._y + _SC.draw.midSize, self._x + _SC.draw.width + _SC.draw.border, self._y + _SC.draw.midSize, _SC.draw.cellSize, (self[pVar] and _SC.color.green or _SC.color.red))
+        DrawText((self[pVar] and "       ON" or "       OFF"), _SC.draw.fontSize, self._x + _SC.draw.row3 + _SC.draw.border - _SC.draw.width*0.075, self._y, _SC.color.grey)
+    end
+    self._y = self._y + _SC.draw.cellSize
+end
+
+
+
+function _G.scriptConfig:load()
+    local function sensitiveMerge(base, t)
+        for i, v in pairs(t) do
+            if type(base[i]) == type(v) then
+                if type(v) == "table" then sensitiveMerge(base[i], v)
+                else base[i] = v
+                end
             end
         end
     end
-    content._tsInstances = content._tsInstances or { }
-	for i = 1, #self._tsInstances do
-        content._tsInstances[i] = { mode = self._tsInstances[i].mode }
-    end
-    SaveSettings(self.name, content)
-end
-function _G.scriptConfig:addTS(tsInstance)
-    if (not SelectorConfig) then
-		SelectorConfig = scriptConfig("Target Selector", "MainTargetSelector")
-		InitializeGameHeroes()
-		if (#GameHeroes == 0) then
-			SelectorConfig:addParam("Note", "No enemy heroes were found!", SCRIPT_PARAM_INFO, "")
-		else
-			for i = 1, #GameHeroes do
-				local name = GameHeroes[i].hero.charName
-				SelectorConfig:addParam(name, name, SCRIPT_PARAM_SLICE, GameHeroes[i].priority, 0, 5)
-				SelectorConfig:setCallback(name, function(value)
-					if (value == 0) then
-						Global.TS_Ignore(name, true)
-					else
-						Global.TS_SetHeroPriority(math.min(value, GameEnemyCount), name, true)
-					end
-				end)
-				if (SelectorConfig[name] == 0) then
-					Global.TS_Ignore(name, true)
-				else
-					Global.TS_SetHeroPriority(math.min(SelectorConfig[name], GameEnemyCount), name, true)
-				end
-			end
-		end
-	end
-	local index = #self._tsInstances + 1
-	self._tsInstances[index] = tsInstance
-	self:addParam("TSMode", "Target Selector Mode:", SCRIPT_PARAM_LIST, tsInstance.mode, { "Low HP", "Most AP", "Most AD", "Less Cast", "Near Mouse", "Priority", "Low HP Priority", "Less Cast Priority", "Dead", "Closest" })
-	self:setCallback("TSMode", function(mode)
-		self._tsInstances[index].mode = mode
-	end)
-	self._tsInstances[index]._config = self.TSMode
-    SaveMaster()
-    self:load()
-end
-function _G.scriptConfig:permaShow(variable)
-	for i = 1, #self._param do
-        if (self._param[i].var == variable) then
-			self._permaShow[#self._permaShow + 1] = variable
-            --print("index:",index)
+
+    local config = __SC__load(self.name)
+    for var, value in pairs(config) do
+        if type(value) == "table" then
+            if self[var] then sensitiveMerge(self[var], value) end
+        else self[var] = value
         end
-    --print("self perma:",self._permaShow)
     end
-    SaveMaster()
+end
+
+function _G.scriptConfig:save()
+    local content = {}
+    content._param = content._param or {}
+    for var, param in pairs(self._param) do
+        if param.pType ~= SCRIPT_PARAM_INFO then
+            content[param.var] = self[param.var]
+            if param.pType == SCRIPT_PARAM_ONKEYDOWN or param.pType == SCRIPT_PARAM_ONKEYTOGGLE then
+                content._param[var] = { key = param.key }
+            end
+        end
+    end
+    content._tsInstances = content._tsInstances or {}
+    for i, ts in pairs(self._tsInstances) do
+        content._tsInstances[i] = { mode = ts.mode }
+    end
+    -- for i,pShow in pairs(self._permaShow) do
+    -- table.insert (content, "_permaShow."..i.."="..tostring(pShow))
+    -- end
+    __SC__save(self.name, content)
+end
+
+function _G.scriptConfig:ResetSubIndexes()
+    if self._subMenuIndex > 0 then
+        self._subInstances[self._subMenuIndex]:ResetSubIndexes()
+        self._subMenuIndex = 0
+    end
+end
+
+function _G.scriptConfig:OnWndMsg()
+    local y1 = _SC.draw.y + _SC.draw.cellSize
+    if CursorIsUnder(self._x, _SC.draw.y, _SC.draw.width + _SC.draw.border, _SC.draw.cellSize) then self:ResetSubIndexes() end
+    for i, instance in ipairs(self._subInstances) do
+        if CursorIsUnder(self._x, y1, _SC.draw.width + _SC.draw.border, _SC.draw.cellSize) then self._subMenuIndex = i return end
+        y1 = y1 + _SC.draw.cellSize
+    end
+    if #self._tsInstances > 0 then
+        for _, tsInstance in ipairs(self._tsInstances) do
+            y1 = tsInstance:ClickMenu(self._x, y1)
+        end
+    end
+    for i, param in ipairs(self._param) do
+        if param.pType == SCRIPT_PARAM_ONKEYDOWN or param.pType == SCRIPT_PARAM_ONKEYTOGGLE then
+            if CursorIsUnder(self._x + _SC.draw.row2, y1, _SC.draw.fontSize, _SC.draw.fontSize) then
+                _SC._changeKey, _SC._changeKeyVar, _SC._changeKeyMenu = true, i, true
+                _SC._changeKeyInstance = self
+                self:ResetSubIndexes()
+                return
+            end
+        end
+        if param.pType == SCRIPT_PARAM_ONOFF or param.pType == SCRIPT_PARAM_ONKEYTOGGLE then
+            if CursorIsUnder(self._x + _SC.draw.row3, y1, _SC.draw.width - _SC.draw.row3, _SC.draw.fontSize) then
+                self[param.var] = not self[param.var]
+                self:save()
+                self:ResetSubIndexes()
+                return
+            end
+        end
+        if param.pType == SCRIPT_PARAM_COLOR then
+            if CursorIsUnder(self._x + _SC.draw.row3, y1, _SC.draw.width - _SC.draw.row3, _SC.draw.fontSize) then
+                __CP(nil, nil, self[param.var][1], self[param.var][2], self[param.var][3], self[param.var][4], self[param.var])
+                self:save()
+                self:ResetSubIndexes()
+                return
+            end
+        end
+		
+		
+        if param.pType == SCRIPT_PARAM_SLICE then
+            if CursorIsUnder(self._x + _SC.draw.row3 - _SC.draw.border, y1, WINDOW_W, _SC.draw.fontSize) then
+                self._slice = i
+                _SC._sliceInstance = self
+                self:ResetSubIndexes()
+
+                return
+            end
+        end
+        if param.pType == SCRIPT_PARAM_LIST then
+            if CursorIsUnder(self._x + _SC.draw.row3 - _SC.draw.border, y1, WINDOW_W, _SC.draw.fontSize) then
+                self._list = i
+                _SC._listInstance = self
+                self:ResetSubIndexes()
+
+                return
+            end
+        end
+        y1 = y1 + _SC.draw.cellSize
+    end
+end
+
+TARGET_LOW_HP = 1
+TARGET_MOST_AP = 2
+TARGET_MOST_AD = 3
+TARGET_LESS_CAST = 4
+TARGET_NEAR_MOUSE = 5
+TARGET_PRIORITY = 6
+TARGET_LOW_HP_PRIORITY = 7
+TARGET_LESS_CAST_PRIORITY = 8
+TARGET_DEAD = 9
+TARGET_CLOSEST = 10
+DAMAGE_MAGIC = 1
+DAMAGE_PHYSICAL = 2
+-- Class related global
+local _TS_Draw
+local _TargetSelector__texted = { "LowHP", "MostAP", "MostAD", "LessCast", "NearMouse", "Priority", "LowHPPriority", "LessCastPriority", "Dead", "Closest" }
+function _G.TS_Print(enemyTeam)
+    local enemyTeam = (enemyTeam ~= false)
+    for _, target in ipairs(_gameHeroes) do
+        if target.hero ~= nil and target.hero.valid and target.enemy == enemyTeam then
+            PrintChat("[TS] " .. (enemyTeam and "Enemy " or "Ally ") .. target.tIndex .. " (" .. target.index .. ") : " .. target.hero.charName .. " Mode=" .. (target.ignore and "ignore" or "target") .. " Priority=" .. target.priority)
+        end
+    end
 end
 
 function _G.TS_SetFocus(target, enemyTeam)
-	local target = GetGameHero(target)
-	if (target and target.team and (target.team ~= myHero.team)) then
-		for i = 1, #GameHeroes do
-			if (GameHeroes[i].hero.networkID == target.networkID) then
-				GameHeroes[i].priority = 1
-			else
-				GameHeroes[i].priority = GameEnemyCount
-			end
-			if (SelectorConfig) then
-				SelectorConfig[GameHeroes[i].hero.charName] = GameHeroes[i].priority
-			end
-		end
-	end
-	Global.TS_SetFocus(target, enemyTeam)
+    local enemyTeam = (enemyTeam ~= false)
+    local selected = _gameHeroes__hero(target, "TS_SetFocus")
+    if selected ~= nil and selected.valid and selected.type == "obj_AI_Hero" and (selected.team ~= player.team) == enemyTeam then
+        for _, _gameHero in ipairs(_gameHeroes) do
+            if _gameHero.enemy == enemyTeam then
+                if _gameHero.hero.networkID == selected.networkID then
+                    _gameHero.priority = 1
+                    PrintChat("[TS] Focusing " .. _gameHero.hero.charName)
+                else
+                    _gameHero.priority = (enemyTeam and _gameEnemyCount or _gameAllyCount)
+                end
+            end
+        end
+    end
 end
+
 function _G.TS_SetHeroPriority(priority, target, enemyTeam)
-	local index = GetGameHeroIndex(target)
-	if (index) then
-		index = index % GameEnemyCount + 1
-		local oldPriority = GameHeroes[index].priority
-		if ((oldPriority == nil) or (oldPriority == priority)) then return end
-		for i = 1, #GameHeroes do
-			if (i == index) then
-				GameHeroes[i].priority = priority
-			else
-				GameHeroes[i].priority = GameEnemyCount
-			end
-			if (SelectorConfig) then
-				SelectorConfig[GameHeroes[i].hero.charName] = GameHeroes[i].priority
-			end
-		end
-	end
-	Global.TS_SetHeroPriority(priority, target, enemyTeam)
+    local enemyTeam = (enemyTeam ~= false)
+    local heroCount = (enemyTeam and _gameEnemyCount or _gameAllyCount)
+    assert(type(priority) == "number" and priority >= 0 and priority <= heroCount, "TS_SetHeroPriority: wrong argument types (<number> 1 to " .. heroCount .. " expected)")
+    local selected = _gameHeroes__index(target, "TS_SetHeroPriority: wrong argument types (<charName> or <heroIndex> or <hero> or nil expected)", enemyTeam)
+    if selected ~= nil then
+        local oldPriority = _gameHeroes[selected].priority
+        if oldPriority == nil or oldPriority == priority then return end
+        for index, _gameHero in ipairs(_gameHeroes) do
+            if _gameHero.enemy == enemyTeam then
+                if index == selected then
+                    _gameHero.priority = priority
+                    --PrintChat("[TS] "..(enemyTeam and "Enemy " or "Ally ").._gameHero.tIndex.." (".._gameHero.index..") : " .. _gameHero.hero.charName .. " Mode=" .. (_gameHero.ignore and "ignore" or "target") .." Priority=" .. _gameHero.priority)
+                end
+            end
+        end
+    end
 end
+
+function _G.TS_SetPriority(target1, target2, target3, target4, target5)
+    assert((target5 ~= nil and _gameEnemyCount == 5) or (target4 ~= nil and _gameEnemyCount < 5) or (target3 ~= nil and _gameEnemyCount == 3) or (target2 ~= nil and _gameEnemyCount == 2) or (target1 ~= nil and _gameEnemyCount == 1), "TS_SetPriority: wrong argument types (" .. _gameEnemyCount .. " <target> expected)")
+    TS_SetHeroPriority(1, target1)
+    TS_SetHeroPriority(2, target2)
+    TS_SetHeroPriority(3, target3)
+    TS_SetHeroPriority(4, target4)
+    TS_SetHeroPriority(5, target5)
+end
+
+function _G.TS_SetPriorityA(target1, target2, target3, target4, target5)
+    assert((target5 ~= nil and _gameAllyCount == 5) or (target4 ~= nil and _gameAllyCount < 5) or (target3 ~= nil and _gameAllyCount == 3) or (target2 ~= nil and _gameAllyCount == 2) or (target1 ~= nil and _gameAllyCount == 1), "TS_SetPriorityA: wrong argument types (" .. _gameAllyCount .. " <target> expected)")
+    TS_SetHeroPriority(1, target1, false)
+    TS_SetHeroPriority(2, target2, false)
+    TS_SetHeroPriority(3, target3, false)
+    TS_SetHeroPriority(4, target4, false)
+    TS_SetHeroPriority(5, target5, false)
+end
+
+function _G.TS_GetPriority(target, enemyTeam)
+    local enemyTeam = (enemyTeam ~= false)
+    local index = _gameHeroes__index(target, "TS_GetPriority", enemyTeam)
+    return (index and _gameHeroes[index].priority or nil), (enemyTeam and _gameEnemyCount or _gameAllyCount)
+end
+
 function _G.TS_Ignore(target, enemyTeam)
-    local target = GetGameHero(target, "TS_Ignore")
-    if (target and target.valid and (target.type == "obj_AI_Hero") and (target.team ~= player.team)) then
-        for i = 1, #GameHeroes do
-            if (GameHeroes[i].hero.networkID == target.networkID) then
-                GameHeroes[i].ignore = not GameHeroes[i].ignore
-				if (SelectorConfig) then
-					SelectorConfig[GameHeroes[i].hero.charName] = 0
-				end
+    local enemyTeam = (enemyTeam ~= false)
+    local selected = _gameHeroes__hero(target, "TS_Ignore")
+    if selected ~= nil and selected.valid and selected.type == "obj_AI_Hero" and (selected.team ~= player.team) == enemyTeam then
+        for _, _gameHero in ipairs(_gameHeroes) do
+            if _gameHero.hero.networkID == selected.networkID and _gameHero.enemy == enemyTeam then
+                _gameHero.ignore = not _gameHero.ignore
+                --PrintChat("[TS] "..(_gameHero.ignore and "Ignoring " or "Re-targetting ").._gameHero.hero.charName)
                 break
             end
         end
     end
-	Global.TS_Ignore(target, enemyTeam)
 end
 
+local function _TS_Draw_Init()
+    if not _TS_Draw then
+        UpdateWindow()
+        _TS_Draw = { y1 = 0, height = 0, fontSize = 14, width = WINDOW_W and math.round(WINDOW_W / 4.8) or 213, border = 2, 
+		background = ARGB(Draw.Opacity, Colors.Background[1], Colors.Background[2], Colors.Background[3]), 
+		textColor = ARGB(Draw.FontOpacity, Colors.FontColor[1], Colors.FontColor[2], Colors.FontColor[3]), 
+		redColor = 1422721024, 
+		greenColor = 1409321728, 
+		blueColor = 2684354716 }
+        _TS_Draw.cellSize, _TS_Draw.midSize, _TS_Draw.row1, _TS_Draw.row2, _TS_Draw.row3, _TS_Draw.row4 = _TS_Draw.fontSize + _TS_Draw.border, _TS_Draw.fontSize / 2, _TS_Draw.width * 0.6, _TS_Draw.width * 0.7, _TS_Draw.width * 0.8, _TS_Draw.width * 0.9
+    end
+end
+
+function _G.TS__DrawMenu(x, y, enemyTeam)
+    assert(type(x) == "number" and type(y) == "number", "TS__DrawMenu: wrong argument types (<number>, <number> expected)")
+    _TS_Draw_Init()
+    local enemyTeam = (enemyTeam ~= false)
+    local y1 = y
+	if(_gameHeroes ~= nil) then
+    for _, _gameHero in ipairs(_gameHeroes) do
+        if _gameHero.enemy == enemyTeam then
+            DrawLine(x - _TS_Draw.border, y1 + _TS_Draw.midSize, x + _TS_Draw.row1 - _TS_Draw.border, y1 + _TS_Draw.midSize, _TS_Draw.cellSize, (_gameHero.ignore and _TS_Draw.redColor or _TS_Draw.background))
+            DrawText(_gameHero.hero.charName, _TS_Draw.fontSize, x, y1, _TS_Draw.textColor)
+            DrawLine(x + _TS_Draw.row1, y1 + _TS_Draw.midSize, x + _TS_Draw.row2 - _TS_Draw.border, y1 + _TS_Draw.midSize, _TS_Draw.cellSize, _TS_Draw.background)
+            DrawText("   " .. (_gameHero.ignore and "-" or tostring(_gameHero.priority)), _TS_Draw.fontSize, x + _TS_Draw.row1, y1, _TS_Draw.textColor)
+            DrawLine(x + _TS_Draw.row2, y1 + _TS_Draw.midSize, x + _TS_Draw.row3 - _TS_Draw.border, y1 + _TS_Draw.midSize, _TS_Draw.cellSize, _TS_Draw.blueColor)
+            DrawText("   -", _TS_Draw.fontSize, x + _TS_Draw.row2, y1, _TS_Draw.textColor)
+            DrawLine(x + _TS_Draw.row3, y1 + _TS_Draw.midSize, x + _TS_Draw.row4 - _TS_Draw.border, y1 + _TS_Draw.midSize, _TS_Draw.cellSize, _TS_Draw.blueColor)
+            DrawText("   +", _TS_Draw.fontSize, x + _TS_Draw.row3, y1, _TS_Draw.textColor)
+            DrawLine(x + _TS_Draw.row4, y1 + _TS_Draw.midSize, x + _TS_Draw.width, y1 + _TS_Draw.midSize, _TS_Draw.cellSize, _TS_Draw.redColor)
+            DrawText("   X", _TS_Draw.fontSize, x + _TS_Draw.row4, y1, _TS_Draw.textColor)
+            y1 = y1 + _TS_Draw.cellSize
+        end
+    end
+	end
+    return y1
+end
+
+function _G.TS_ClickMenu(x, y, enemyTeam)
+    assert(type(x) == "number" and type(y) == "number", "TS__DrawMenu: wrong argument types (<number>, <number> expected)")
+    _TS_Draw_Init()
+    local enemyTeam = (enemyTeam ~= false)
+    local y1 = y
+    for index, _gameHero in ipairs(_gameHeroes) do
+        if _gameHero.enemy == enemyTeam then
+            if CursorIsUnder(x + _TS_Draw.row2, y1, _TS_Draw.fontSize, _TS_Draw.fontSize) then
+                TS_SetHeroPriority(math.max(1, _gameHero.priority - 1), index)
+            elseif CursorIsUnder(x + _TS_Draw.row3, y1, _TS_Draw.fontSize, _TS_Draw.fontSize) then
+                TS_SetHeroPriority(math.min((enemyTeam and _gameEnemyCount or _gameAllyCount), _gameHero.priority + 1), index)
+            elseif CursorIsUnder(x + _TS_Draw.row4, y1, _TS_Draw.fontSize, _TS_Draw.fontSize) then TS_Ignore(index)
+            end
+            y1 = y1 + _TS_Draw.cellSize
+        end
+    end
+    return y1
+end
+
+local __TargetSelector__OnSendChat
+function TargetSelector__OnLoad()
+    if not __TargetSelector__OnSendChat then
+        function __TargetSelector__OnSendChat(msg)
+            if not msg or msg:sub(1, 3) ~= ".ts" then return end
+            BlockChat()
+            local args = {}
+            while string.find(msg, " ") do
+                local index = string.find(msg, " ")
+                table.insert(args, msg:sub(1, index - 1))
+                msg = string.sub(msg, index + 1)
+            end
+            table.insert(args, msg)
+            local cmd = args[1]:lower()
+            if cmd == ".tsprint" then
+                TS_Print()
+            elseif cmd == ".tsprinta" then
+                TS_Print(false)
+            elseif cmd == ".tsfocus" then
+                PrintChat(cmd .. " - " .. args[2])
+                TS_SetFocus(args[2])
+            elseif cmd == ".tsfocusa" then
+                TS_SetFocus(args[2], false)
+            elseif cmd == ".tspriorityhero" then
+                TS_SetHeroPriority(args[2], args[3])
+            elseif cmd == ".tspriorityheroa" then
+                TS_SetHeroPriority(args[2], args[3], false)
+            elseif cmd == ".tspriority" then
+                TS_SetPriority(args[2], args[3], args[4], args[5], args[6])
+            elseif cmd == ".tsprioritya" then
+                TS_SetPriorityA(args[2], args[3], args[4], args[5], args[6])
+            elseif cmd == ".tsignore" then
+                TS_Ignore(args[2])
+            elseif cmd == ".tsignorea" then
+                TS_Ignore(args[2], false)
+            end
+        end
+
+        AddChatCallback(__TargetSelector__OnSendChat)
+    end
+end
+function _G.TargetSelector:DrawMenu(x, y)
+    assert(type(x) == "number" and type(y) == "number", "ts:DrawMenu: wrong argument types (<number>, <number> expected)")
+    _TS_Draw_Init()
+    DrawLine(x - _TS_Draw.border, y + _TS_Draw.midSize, x + _TS_Draw.row3 - _TS_Draw.border, y + _TS_Draw.midSize, _TS_Draw.cellSize, _TS_Draw.background)
+    DrawText((self.name or "ts") .. " Mode : " .. translationchk(_TargetSelector__texted[self.mode]), _TS_Draw.fontSize, x, y, _TS_Draw.textColor)
+    
+	DrawLine(x + _TS_Draw.row3- _TS_Draw.width*0.05, y + _TS_Draw.midSize, 
+	x + _TS_Draw.row4 - _TS_Draw.border- _TS_Draw.width*0.05, y + _TS_Draw.midSize, _TS_Draw.cellSize, _TS_Draw.blueColor)
+    DrawText("   <", _TS_Draw.fontSize, x + _TS_Draw.row3- _TS_Draw.width*0.075, y, _TS_Draw.textColor)
+	
+    DrawLine(x + _TS_Draw.row4 - _TS_Draw.width*0.05, y + _TS_Draw.midSize, 
+	x + _TS_Draw.width- _TS_Draw.width*0.05, y + _TS_Draw.midSize, _TS_Draw.cellSize, _TS_Draw.blueColor)
+    DrawText("   >", _TS_Draw.fontSize, x + _TS_Draw.row4- _TS_Draw.width*0.075, y, _TS_Draw.textColor)
+    return y + _TS_Draw.cellSize
+end
+function _G.TargetSelector:ClickMenu(x, y)
+    assert(type(x) == "number" and type(y) == "number", "ts:ClickMenu: wrong argument types (<number>, <number>, <string> expected)")
+    _TS_Draw_Init()
+    if CursorIsUnder(x + _TS_Draw.row3- _TS_Draw.width*0.05, y, _TS_Draw.row4 - _TS_Draw.row3 - _TS_Draw.border, _TS_Draw.fontSize) then
+        self.mode = (self.mode == 1 and #_TargetSelector__texted or self.mode - 1)
+    elseif CursorIsUnder(x + _TS_Draw.row4- _TS_Draw.width*0.05, y, _TS_Draw.width-_TS_Draw.row4, _TS_Draw.fontSize) then
+        self.mode = (self.mode == #_TargetSelector__texted and 1 or self.mode + 1)
+    end
+    return y + _TS_Draw.cellSize
+end
 local tranTable = {
+["Menu"] = "菜单",
+["press key for Menu"] = "设定新的菜单按钮...",
 ["Evadeee"] = "躲避",
 ["Enemy Spells"] = "敌人技能",
 ["Evading Spells"] = "躲避技能",
@@ -2063,8 +1927,8 @@ local tranTable = {
 ["Always"] = "总是",
 ["Auto Kill"] = "自动击杀",
 ["Insec Wardjump Range Reduction"] = "回旋踢摸眼范围减少",
-["Magnetic Wards"] = "磁性插眼",
-["Enable Magnetic Wards Draw"] = "启用磁性插眼显示",
+["Magnetic Wards"] = "便捷吸附性插眼",
+["Enable Magnetic Wards Draw"] = "启用吸附性插眼显示",
 ["Use lfc"] = "使用lfc",
 ["--- Spots to be Displayed ---"] = "--- 显示的插眼点 ---",
 ["Normal Spots"] = "普通地点",
@@ -3203,42 +3067,124 @@ local tranTable = {
 ["Circle On W Object"] = "在W抓取的目标上画圈",
 ["Syndra - Keys Settings"] = "[辛德拉] - 按键设置",
 ["Cast QE/WE Near Mouse"] = "在鼠标附近使用QE/WE",
-}
-local SupportedScriptList = {
-"Evadeee","Sida's Auto Carry","Activator","DeklandAIO: Syndra","DeklandAIO: Orianna"
+---------------胖子意识---------------
+["Big Fat Gosu"] = "胖子合集",
+["Load Big Fat Mark IV"] = "加载胖子意识",
+["Load Big Fat Evade"] = "加载胖子躲避",
+["Sorry, this champion isnt supported yet =("] = "对不起,不支持这个英雄",
+["Big Fat Gosu v. 3.61"] = "胖子合集v. 3.61",
+["Big Fat Hev - Mark IV"] = "胖子意识",
+["[Voice Settings]"] = "[语音设置]",
+["Volume"] = "音量",
+["Welcome"] = "欢迎",
+["Danger!"] = "危险",
+["Shutdown"] = "终结",
+["SummonerSpells"] = "召唤师技能",
+["WinLose sounds"] = "胜利/失败",
+["Kill Announcer"] = "击杀播报",
+["Shrooms Announcement"] = "踩蘑菇播报",
+["Smite Announcement"] = "惩戒播报",
+["JungleTimers Announcement"] = "打野计时播报",
+["[Incoming Enemys to Track]"] = "[监视即将到来的敌人]",
+["ON/OFF"] = "开/关",
+["Stop track inc. enemys after x min"] = "x分钟后停止监视敌人",
+["Allow this option"] = "允许此项设置",
+["Scan Range"] = "扫描范围",
+["Draw minimap"] = "小地图显示",
+["Use Danger Sprite"] = "使用危险标志",
+["Show waypoints"] = "显示路径点",
+["Enable Voice System"] = "启用语音系统",
+["Jax"] = "贾克斯",
+["[CD Tracker]"] = "[冷却计时器]",
+["Use CD Tracker"] = "使用冷却计时器",
+["[Wards to Track]"] = "[眼位监视]",
+["Use Wards Tracker"] = "使用眼位监视",
+["Use Sprites"] = "使用图片",
+["Use Circles"] = "使用线圈",
+["Use Text"] = "使用文字",
+["[Recall Tracker]"] = "[回城监视]",
+["Use Recall Tracker"] = "使用回城监视",
+["Hud X"] = "HUD X轴位置",
+["Hud Y"] = "HUD Y轴位置",
+["Print Finished and Cancelled Recalls"] = "显示完成的回城和取消的回城",
+["[BaseUlt]"] = "[基地大招]",
+["Use BaseUlt"] = "使用基地大招",
+["Print BaseUlt alert in chat"] = "在聊天框中显示基地大招提示",
+["Draw BaseUlt Hud"] = "显示基地大招HUD",
+["[Team BaseUlt Friends]"] = "[显示队友的基地大招]",
+["[Tower Range]"] = "[防御塔范围]",
+["Use Tower Ranges"] = "显示防御塔范围",
+["Show only close"] = "只在接近防御塔时显示",
+["Show ally turrets"] = "显示友军防御塔范围",
+["Show turret view"] = "显示防御塔视野",
+["Circle Quality"] = "线圈质量",
+["Circle Width"] = "线圈宽度",
+["[Jungle Timers]"] = "[打野计时]",
+["Jungle Disrespect Tracker(FOW)"] = "无视野野区监视",
+["Sounds for Drake and Baron"] = "大龙小龙提示音",
+["(DEV) try to detect more"] = "(开发者)尝试检测更多信息",
+["Enable Jungle Timers!!! Finally ^^"] = "最后,启用打野计时",
+["[Enemies Hud]"] = "[敌人信息HUD]",
+["Enable enemies hud"] = "启用敌人信息HUD",
+["Hud Style"] = "HUD风格",
+["Classic(small)"] = "经典(小)",
+["Circle(medium)"] = "圆形(中)",
+["Circle(big)"] = "圆形(大)",
+["LowFps(Mendeleev)"] = "低fps",
+["RitoStyle"] = "Rito风格",
+["Hud Mode"] = "HUD模式",
+["Vertical"] = " 垂直的",
+["Horizontal"] = "水平的",
+["HudX and HudY dont work for Old one"] = "HUD XY轴位置不会对经典风格生效",
+["[Thresh Lantern]"] = "[锤石的灯笼]",
+["Use Nearest Lantern"] = "捡最近的灯笼",
+["Auto Use if HP < %"] = "如果生命值小于%自动使用",
+["[Anti CC]"] = "[反团控]",
+["Enable AntiCC"] = "启用反团控",
+["[BuffTypes]"] = "[控制类型]",
+["Disarm"] = "缴械",
+["ForcedAction"] = "强制动作(嘲讽/魅惑)",
+["Suppression"] = "压制",
+["Suspension"] = "击飞",
+["Slow"] = "减速",
+["Blind"] = "致盲",
+["Stun"] = "眩晕",
+["Root"] = "禁锢",
+["Silence"] = "沉默",
+["Enable Mikael for teammates"] = "启用对队友使用坩埚",
+["[TeamMates for Mikael]"] = "[对队友使用坩埚]",
+["It will use Cleanse, Dervish Blade,"] = "它会使用净化,苦行僧之刃",
+["Quicksilver Sash, Mercurial Scimitar"] = "水银饰带,水银弯刀",
+[" or Mikael's Crucible."] = "或者米凯尔的坩埚",
+["Suppressions by Malzahar, Skarner, Urgot,"] = "解除玛尔扎哈,斯卡纳,厄加特的压制",
+["Warwick could be only removed by QSS"] = "狼人的压制只有水银能解",
+["[Misc]"] = "[杂项]",
+["Draw Exp Circle"] = "显示经验获得范围",
+["Extra Awareness"] = "额外意识",
+["Heal Cd's on Aram"] = "在大乱斗模式显示治疗cd",
+["LordsDecree Cooldown"] = "雷霆领主的法令冷却时间",
+["Big Fat Hev - Mark IV v. 4.001"] = "胖子意识 v. 4.001",
+
 }
 function translationchk(text)
     assert(type(text) == "string","<string> expected for text")
     local text2
     --if(text == "text1") then text2 = "change the text" end
     --print("find the text:",text,"tranTable:",tranTable[text])
-    for i ,v in pairs(tranTable) do
+    --for i ,v in pairs(tranTable) do
     if(tranTable[text] ~= nil) then 
     text2 = tranTable[text] 
     --text2 = text
     else
     text2 = text
     end
-    end
+    --end
     return text2
 end
---[[function translateheaderchk(header)
-    for i ,v in pairs(SupportedScriptList) do
-    if(v == header) then 
-    PrintLocal(header.." loaded!")
-    end
-    end
-end]]--
 function OnLoad()
 	AAAUpdate()
 	PrintLocal("Loaded successfully! by: leoxp,Have fun!")
 end
-function OnUnload()
-	SaveMaster()
-end
-
 function PrintLocal(text, isError)
 	PrintChat("<font color=\"#ff0000\">BoL Config Translater:</font> <font color=\"#"..(isError and "F78183" or "FFFFFF").."\">"..text.."</font>")
 end
-
--- End of A1-Config.
