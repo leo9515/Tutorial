@@ -1,4 +1,4 @@
-local version = "0.0118"
+local version = "0.0120"
 local Draw = {
 	Width = 374, -- even number or separator lines on params will be off by one
 	Padding = 3,
@@ -22,7 +22,14 @@ local Colors = {
 	DarkRed = { 128, 0, 0 },
 	LightGray = { 211, 211, 211 },
 }
-
+local Global = {
+	TS_SetFocus = _G.TS_SetFocus,
+	TS_SetHeroPriority = _G.TS_SetHeroPriority,
+	TS_Ignore = TS_Ignore,
+}
+local GameHeroes = { }
+local SelectorConfig = nil
+local GameEnemyCount = 0
 class('AAAUpdate')
 function AAAUpdate:__init()
 	self.updating = false
@@ -453,10 +460,90 @@ end
 
 function _G.scriptConfig:addTS(tsInstance)
     assert(type(tsInstance.mode) == "number", "addTS: expected TargetSelector)")
-    _SC.useTS = true
-    table.insert(self._tsInstances, tsInstance)
+if (not SelectorConfig) then
+		SelectorConfig = scriptConfig("Target Selector", "MainTargetSelector")
+		InitializeGameHeroes()
+		if (#GameHeroes == 0) then
+			SelectorConfig:addParam("Note", "No enemy heroes were found!", SCRIPT_PARAM_INFO, "")
+		else
+			for i = 1, #GameHeroes do
+				local name = GameHeroes[i].hero.charName
+				SelectorConfig:addParam(name, name, SCRIPT_PARAM_SLICE, GameHeroes[i].priority, 0, 5)
+				SelectorConfig:setCallback(name, function(value)
+					if (value == 0) then
+						Global.TS_Ignore(name, true)
+					else
+						Global.TS_SetHeroPriority(math.min(value, GameEnemyCount), name, true)
+					end
+				end)
+				if (SelectorConfig[name] == 0) then
+					Global.TS_Ignore(name, true)
+				else
+					Global.TS_SetHeroPriority(math.min(SelectorConfig[name], GameEnemyCount), name, true)
+				end
+			end
+		end
+	end
+	local index = #self._tsInstances + 1
+	self._tsInstances[index] = tsInstance
+	self:addParam("TSMode", "Target Selector Mode:", SCRIPT_PARAM_LIST, tsInstance.mode, { "Low HP", "Most AP", "Most AD", "Less Cast", "Near Mouse", "Priority", "Low HP Priority", "Less Cast Priority", "Dead", "Closest" })
+	self:setCallback("TSMode", function(mode)
+		self._tsInstances[index].mode = mode
+	end)
+	self._tsInstances[index]._config = self.TSMode
     __SC__saveMaster()
     self:load()
+end
+
+function _G.TS_SetFocus(target, enemyTeam)
+	local target = GetGameHero(target)
+	if (target and target.team and (target.team ~= myHero.team)) then
+		for i = 1, #GameHeroes do
+			if (GameHeroes[i].hero.networkID == target.networkID) then
+				GameHeroes[i].priority = 1
+			else
+				GameHeroes[i].priority = GameEnemyCount
+			end
+			if (SelectorConfig) then
+				SelectorConfig[GameHeroes[i].hero.charName] = GameHeroes[i].priority
+			end
+		end
+	end
+	Global.TS_SetFocus(target, enemyTeam)
+end
+function _G.TS_SetHeroPriority(priority, target, enemyTeam)
+	local index = GetGameHeroIndex(target)
+	if (index) then
+		index = index % GameEnemyCount + 1
+		local oldPriority = GameHeroes[index].priority
+		if ((oldPriority == nil) or (oldPriority == priority)) then return end
+		for i = 1, #GameHeroes do
+			if (i == index) then
+				GameHeroes[i].priority = priority
+			else
+				GameHeroes[i].priority = GameEnemyCount
+			end
+			if (SelectorConfig) then
+				SelectorConfig[GameHeroes[i].hero.charName] = GameHeroes[i].priority
+			end
+		end
+	end
+	Global.TS_SetHeroPriority(priority, target, enemyTeam)
+end
+function _G.TS_Ignore(target, enemyTeam)
+    local target = GetGameHero(target, "TS_Ignore")
+    if (target and target.valid and (target.type == "obj_AI_Hero") and (target.team ~= player.team)) then
+        for i = 1, #GameHeroes do
+            if (GameHeroes[i].hero.networkID == target.networkID) then
+                GameHeroes[i].ignore = not GameHeroes[i].ignore
+				if (SelectorConfig) then
+					SelectorConfig[GameHeroes[i].hero.charName] = 0
+				end
+                break
+            end
+        end
+    end
+	Global.TS_Ignore(target, enemyTeam)
 end
 
 function _G.scriptConfig:permaShow(pVar)
@@ -489,12 +576,6 @@ function _G.scriptConfig:OnDraw()
         if self._subMenuIndex == index then _:OnDraw() end
     end
 
-    if #self._tsInstances > 0 then
-        --_SC._Idraw.y = TS__DrawMenu(_SC._Idraw.x, _SC._Idraw.y)
-        for _, tsInstance in ipairs(self._tsInstances) do
-            self._y = tsInstance:DrawMenu(self._x, self._y)
-        end
-    end
     for index, _ in ipairs(self._param) do
         self:_DrawParam(index)
     end
@@ -618,11 +699,6 @@ function _G.scriptConfig:OnWndMsg()
         if CursorIsUnder(self._x, y1, _SC.draw.width + _SC.draw.border, _SC.draw.cellSize) then self._subMenuIndex = i return end
         y1 = y1 + _SC.draw.cellSize
     end
-    if #self._tsInstances > 0 then
-        for _, tsInstance in ipairs(self._tsInstances) do
-            y1 = tsInstance:ClickMenu(self._x, y1)
-        end
-    end
     for i, param in ipairs(self._param) do
         if param.pType == SCRIPT_PARAM_ONKEYDOWN or param.pType == SCRIPT_PARAM_ONKEYTOGGLE then
             if CursorIsUnder(self._x + _SC.draw.row2, y1, _SC.draw.fontSize, _SC.draw.fontSize) then
@@ -672,227 +748,57 @@ function _G.scriptConfig:OnWndMsg()
     end
 end
 
-TARGET_LOW_HP = 1
-TARGET_MOST_AP = 2
-TARGET_MOST_AD = 3
-TARGET_LESS_CAST = 4
-TARGET_NEAR_MOUSE = 5
-TARGET_PRIORITY = 6
-TARGET_LOW_HP_PRIORITY = 7
-TARGET_LESS_CAST_PRIORITY = 8
-TARGET_DEAD = 9
-TARGET_CLOSEST = 10
-DAMAGE_MAGIC = 1
-DAMAGE_PHYSICAL = 2
--- Class related global
-local _TS_Draw
-local _TargetSelector__texted = { "LowHP", "MostAP", "MostAD", "LessCast", "NearMouse", "Priority", "LowHPPriority", "LessCastPriority", "Dead", "Closest" }
-function _G.TS_Print(enemyTeam)
-    local enemyTeam = (enemyTeam ~= false)
-    for _, target in ipairs(_gameHeroes) do
-        if target.hero ~= nil and target.hero.valid and target.enemy == enemyTeam then
-            PrintChat("[TS] " .. (enemyTeam and "Enemy " or "Ally ") .. target.tIndex .. " (" .. target.index .. ") : " .. target.hero.charName .. " Mode=" .. (target.ignore and "ignore" or "target") .. " Priority=" .. target.priority)
+
+function GetGameHero(target)
+    if (type(target) == "string") then
+		for i = 1, #GameHeroes do
+			local gameHero = GameHeroes[i]
+            if ((gameHero.hero.charName == target) and (gameHero.hero.team ~= player.team)) then
+                return gameHero.hero
+            end
         end
+    elseif (type(target) == "number") then
+        return heroManager:getHero(target)
+    elseif (target == nil) then
+        return GetTarget()
+    else
+        return target
     end
 end
-
-function _G.TS_SetFocus(target, enemyTeam)
-    local enemyTeam = (enemyTeam ~= false)
-    local selected = _gameHeroes__hero(target, "TS_SetFocus")
-    if selected ~= nil and selected.valid and selected.type == "obj_AI_Hero" and (selected.team ~= player.team) == enemyTeam then
-        for _, _gameHero in ipairs(_gameHeroes) do
-            if _gameHero.enemy == enemyTeam then
-                if _gameHero.hero.networkID == selected.networkID then
-                    _gameHero.priority = 1
-                    PrintChat("[TS] Focusing " .. _gameHero.hero.charName)
-                else
-                    _gameHero.priority = (enemyTeam and _gameEnemyCount or _gameAllyCount)
-                end
+function GetGameHeroIndex(target)
+	if (type(target) == "string") then
+		for i = 1, #GameHeroes do
+			local gameHero = GameHeroes[i]
+            if ((gameHero.hero.charName == target) and (gameHero.hero.team ~= player.team)) then
+                return gameHero.index
+            end
+        end
+    elseif (type(target) == "number") then
+        return target
+    else
+        return GetGameHeroIndex(target.charName)
+    end
+end
+function InitializeGameHeroes()
+    if (#GameHeroes == 0) then
+        for i = 1, heroManager.iCount do
+            local hero = heroManager:getHero(i)
+            if (hero and hero.valid and(hero.team ~= myHero.team)) then
+                GameEnemyCount = GameEnemyCount + 1
+                GameHeroes[#GameHeroes + 1] = {
+                    hero = hero,
+                    index = i,
+                    tIndex = GameEnemyCount,
+                    ignore = false,
+                    priority = 1,
+                    enemy = true,
+                }
+                -- print(hero.charName..":"..#GameHeroes)
             end
         end
     end
 end
 
-function _G.TS_SetHeroPriority(priority, target, enemyTeam)
-    local enemyTeam = (enemyTeam ~= false)
-    local heroCount = (enemyTeam and _gameEnemyCount or _gameAllyCount)
-    assert(type(priority) == "number" and priority >= 0 and priority <= heroCount, "TS_SetHeroPriority: wrong argument types (<number> 1 to " .. heroCount .. " expected)")
-    local selected = _gameHeroes__index(target, "TS_SetHeroPriority: wrong argument types (<charName> or <heroIndex> or <hero> or nil expected)", enemyTeam)
-    if selected ~= nil then
-        local oldPriority = _gameHeroes[selected].priority
-        if oldPriority == nil or oldPriority == priority then return end
-        for index, _gameHero in ipairs(_gameHeroes) do
-            if _gameHero.enemy == enemyTeam then
-                if index == selected then
-                    _gameHero.priority = priority
-                    --PrintChat("[TS] "..(enemyTeam and "Enemy " or "Ally ").._gameHero.tIndex.." (".._gameHero.index..") : " .. _gameHero.hero.charName .. " Mode=" .. (_gameHero.ignore and "ignore" or "target") .." Priority=" .. _gameHero.priority)
-                end
-            end
-        end
-    end
-end
-
-function _G.TS_SetPriority(target1, target2, target3, target4, target5)
-    assert((target5 ~= nil and _gameEnemyCount == 5) or (target4 ~= nil and _gameEnemyCount < 5) or (target3 ~= nil and _gameEnemyCount == 3) or (target2 ~= nil and _gameEnemyCount == 2) or (target1 ~= nil and _gameEnemyCount == 1), "TS_SetPriority: wrong argument types (" .. _gameEnemyCount .. " <target> expected)")
-    TS_SetHeroPriority(1, target1)
-    TS_SetHeroPriority(2, target2)
-    TS_SetHeroPriority(3, target3)
-    TS_SetHeroPriority(4, target4)
-    TS_SetHeroPriority(5, target5)
-end
-
-function _G.TS_SetPriorityA(target1, target2, target3, target4, target5)
-    assert((target5 ~= nil and _gameAllyCount == 5) or (target4 ~= nil and _gameAllyCount < 5) or (target3 ~= nil and _gameAllyCount == 3) or (target2 ~= nil and _gameAllyCount == 2) or (target1 ~= nil and _gameAllyCount == 1), "TS_SetPriorityA: wrong argument types (" .. _gameAllyCount .. " <target> expected)")
-    TS_SetHeroPriority(1, target1, false)
-    TS_SetHeroPriority(2, target2, false)
-    TS_SetHeroPriority(3, target3, false)
-    TS_SetHeroPriority(4, target4, false)
-    TS_SetHeroPriority(5, target5, false)
-end
-
-function _G.TS_GetPriority(target, enemyTeam)
-    local enemyTeam = (enemyTeam ~= false)
-    local index = _gameHeroes__index(target, "TS_GetPriority", enemyTeam)
-    return (index and _gameHeroes[index].priority or nil), (enemyTeam and _gameEnemyCount or _gameAllyCount)
-end
-
-function _G.TS_Ignore(target, enemyTeam)
-    local enemyTeam = (enemyTeam ~= false)
-    local selected = _gameHeroes__hero(target, "TS_Ignore")
-    if selected ~= nil and selected.valid and selected.type == "obj_AI_Hero" and (selected.team ~= player.team) == enemyTeam then
-        for _, _gameHero in ipairs(_gameHeroes) do
-            if _gameHero.hero.networkID == selected.networkID and _gameHero.enemy == enemyTeam then
-                _gameHero.ignore = not _gameHero.ignore
-                --PrintChat("[TS] "..(_gameHero.ignore and "Ignoring " or "Re-targetting ").._gameHero.hero.charName)
-                break
-            end
-        end
-    end
-end
-
-local function _TS_Draw_Init()
-    if not _TS_Draw then
-        UpdateWindow()
-        _TS_Draw = { y1 = 0, height = 0, fontSize = 14, width = WINDOW_W and math.round(WINDOW_W / 4.8) or 213, border = 2, 
-		background = ARGB(Draw.Opacity, Colors.Background[1], Colors.Background[2], Colors.Background[3]), 
-		textColor = ARGB(Draw.FontOpacity, Colors.FontColor[1], Colors.FontColor[2], Colors.FontColor[3]), 
-		redColor = 1422721024, 
-		greenColor = 1409321728, 
-		blueColor = 2684354716 }
-        _TS_Draw.cellSize, _TS_Draw.midSize, _TS_Draw.row1, _TS_Draw.row2, _TS_Draw.row3, _TS_Draw.row4 = _TS_Draw.fontSize + _TS_Draw.border, _TS_Draw.fontSize / 2, _TS_Draw.width * 0.6, _TS_Draw.width * 0.7, _TS_Draw.width * 0.8, _TS_Draw.width * 0.9
-    end
-end
-
-function _G.TS__DrawMenu(x, y, enemyTeam)
-    assert(type(x) == "number" and type(y) == "number", "TS__DrawMenu: wrong argument types (<number>, <number> expected)")
-    _TS_Draw_Init()
-    local enemyTeam = (enemyTeam ~= false)
-    local y1 = y
-	if(_gameHeroes ~= nil) then
-    for _, _gameHero in ipairs(_gameHeroes) do
-        if _gameHero.enemy == enemyTeam then
-            DrawLine(x - _TS_Draw.border, y1 + _TS_Draw.midSize, x + _TS_Draw.row1 - _TS_Draw.border, y1 + _TS_Draw.midSize, _TS_Draw.cellSize, (_gameHero.ignore and _TS_Draw.redColor or _TS_Draw.background))
-            DrawText(_gameHero.hero.charName, _TS_Draw.fontSize, x, y1, _TS_Draw.textColor)
-            DrawLine(x + _TS_Draw.row1, y1 + _TS_Draw.midSize, x + _TS_Draw.row2 - _TS_Draw.border, y1 + _TS_Draw.midSize, _TS_Draw.cellSize, _TS_Draw.background)
-            DrawText("   " .. (_gameHero.ignore and "-" or tostring(_gameHero.priority)), _TS_Draw.fontSize, x + _TS_Draw.row1, y1, _TS_Draw.textColor)
-            DrawLine(x + _TS_Draw.row2, y1 + _TS_Draw.midSize, x + _TS_Draw.row3 - _TS_Draw.border, y1 + _TS_Draw.midSize, _TS_Draw.cellSize, _TS_Draw.blueColor)
-            DrawText("   -", _TS_Draw.fontSize, x + _TS_Draw.row2, y1, _TS_Draw.textColor)
-            DrawLine(x + _TS_Draw.row3, y1 + _TS_Draw.midSize, x + _TS_Draw.row4 - _TS_Draw.border, y1 + _TS_Draw.midSize, _TS_Draw.cellSize, _TS_Draw.blueColor)
-            DrawText("   +", _TS_Draw.fontSize, x + _TS_Draw.row3, y1, _TS_Draw.textColor)
-            DrawLine(x + _TS_Draw.row4, y1 + _TS_Draw.midSize, x + _TS_Draw.width, y1 + _TS_Draw.midSize, _TS_Draw.cellSize, _TS_Draw.redColor)
-            DrawText("   X", _TS_Draw.fontSize, x + _TS_Draw.row4, y1, _TS_Draw.textColor)
-            y1 = y1 + _TS_Draw.cellSize
-        end
-    end
-	end
-    return y1
-end
-
-function _G.TS_ClickMenu(x, y, enemyTeam)
-    assert(type(x) == "number" and type(y) == "number", "TS__DrawMenu: wrong argument types (<number>, <number> expected)")
-    _TS_Draw_Init()
-    local enemyTeam = (enemyTeam ~= false)
-    local y1 = y
-    for index, _gameHero in ipairs(_gameHeroes) do
-        if _gameHero.enemy == enemyTeam then
-            if CursorIsUnder(x + _TS_Draw.row2, y1, _TS_Draw.fontSize, _TS_Draw.fontSize) then
-                TS_SetHeroPriority(math.max(1, _gameHero.priority - 1), index)
-            elseif CursorIsUnder(x + _TS_Draw.row3, y1, _TS_Draw.fontSize, _TS_Draw.fontSize) then
-                TS_SetHeroPriority(math.min((enemyTeam and _gameEnemyCount or _gameAllyCount), _gameHero.priority + 1), index)
-            elseif CursorIsUnder(x + _TS_Draw.row4, y1, _TS_Draw.fontSize, _TS_Draw.fontSize) then TS_Ignore(index)
-            end
-            y1 = y1 + _TS_Draw.cellSize
-        end
-    end
-    return y1
-end
-
-local __TargetSelector__OnSendChat
-function TargetSelector__OnLoad()
-    if not __TargetSelector__OnSendChat then
-        function __TargetSelector__OnSendChat(msg)
-            if not msg or msg:sub(1, 3) ~= ".ts" then return end
-            BlockChat()
-            local args = {}
-            while string.find(msg, " ") do
-                local index = string.find(msg, " ")
-                table.insert(args, msg:sub(1, index - 1))
-                msg = string.sub(msg, index + 1)
-            end
-            table.insert(args, msg)
-            local cmd = args[1]:lower()
-            if cmd == ".tsprint" then
-                TS_Print()
-            elseif cmd == ".tsprinta" then
-                TS_Print(false)
-            elseif cmd == ".tsfocus" then
-                PrintChat(cmd .. " - " .. args[2])
-                TS_SetFocus(args[2])
-            elseif cmd == ".tsfocusa" then
-                TS_SetFocus(args[2], false)
-            elseif cmd == ".tspriorityhero" then
-                TS_SetHeroPriority(args[2], args[3])
-            elseif cmd == ".tspriorityheroa" then
-                TS_SetHeroPriority(args[2], args[3], false)
-            elseif cmd == ".tspriority" then
-                TS_SetPriority(args[2], args[3], args[4], args[5], args[6])
-            elseif cmd == ".tsprioritya" then
-                TS_SetPriorityA(args[2], args[3], args[4], args[5], args[6])
-            elseif cmd == ".tsignore" then
-                TS_Ignore(args[2])
-            elseif cmd == ".tsignorea" then
-                TS_Ignore(args[2], false)
-            end
-        end
-
-        AddChatCallback(__TargetSelector__OnSendChat)
-    end
-end
-function _G.TargetSelector:DrawMenu(x, y)
-    assert(type(x) == "number" and type(y) == "number", "ts:DrawMenu: wrong argument types (<number>, <number> expected)")
-    _TS_Draw_Init()
-    DrawLine(x - _TS_Draw.border, y + _TS_Draw.midSize, x + _TS_Draw.row3 - _TS_Draw.border, y + _TS_Draw.midSize, _TS_Draw.cellSize, _TS_Draw.background)
-    DrawText((self.name or "ts") .. " Mode : " .. translationchk(_TargetSelector__texted[self.mode]), _TS_Draw.fontSize, x, y, _TS_Draw.textColor)
-    
-	DrawLine(x + _TS_Draw.row3- _TS_Draw.width*0.05, y + _TS_Draw.midSize, 
-	x + _TS_Draw.row4 - _TS_Draw.border- _TS_Draw.width*0.05, y + _TS_Draw.midSize, _TS_Draw.cellSize, _TS_Draw.blueColor)
-    DrawText("   <", _TS_Draw.fontSize, x + _TS_Draw.row3- _TS_Draw.width*0.075, y, _TS_Draw.textColor)
-	
-    DrawLine(x + _TS_Draw.row4 - _TS_Draw.width*0.05, y + _TS_Draw.midSize, 
-	x + _TS_Draw.width- _TS_Draw.width*0.05, y + _TS_Draw.midSize, _TS_Draw.cellSize, _TS_Draw.blueColor)
-    DrawText("   >", _TS_Draw.fontSize, x + _TS_Draw.row4- _TS_Draw.width*0.075, y, _TS_Draw.textColor)
-    return y + _TS_Draw.cellSize
-end
-function _G.TargetSelector:ClickMenu(x, y)
-    assert(type(x) == "number" and type(y) == "number", "ts:ClickMenu: wrong argument types (<number>, <number>, <string> expected)")
-    _TS_Draw_Init()
-    if CursorIsUnder(x + _TS_Draw.row3- _TS_Draw.width*0.05, y, _TS_Draw.row4 - _TS_Draw.row3 - _TS_Draw.border, _TS_Draw.fontSize) then
-        self.mode = (self.mode == 1 and #_TargetSelector__texted or self.mode - 1)
-    elseif CursorIsUnder(x + _TS_Draw.row4- _TS_Draw.width*0.05, y, _TS_Draw.width-_TS_Draw.row4, _TS_Draw.fontSize) then
-        self.mode = (self.mode == #_TargetSelector__texted and 1 or self.mode + 1)
-    end
-    return y + _TS_Draw.cellSize
-end
 local tranTable = {
 ["Menu"] = "菜单",
 ["press key for Menu"] = "设定新的菜单按钮...",
@@ -1069,7 +975,7 @@ local tranTable = {
 ["Version"] = "版本",
 ["No enemy heroes were found!"] = "未发现敌方英雄",
 ["Target Selector Mode:"] = "目标选择模式",
-["*LessCastPriority Recommended"] = "推荐的最不要攻击的有限度",
+["*LessCastPriority Recommended"] = "推荐：最少使用技能+优先级",
 ["Hold Left Click Action"] = "按住鼠标左键的动作",
 ["Focus Selected Target"] = "聚焦选中的目标",
 ["Attack Selected Buildings"] = "攻击选中的建筑",
@@ -2519,6 +2425,13 @@ local tranTable = {
 ["Color Text"] = "文字颜色",
 ["Color Bar"] = "血条颜色颜色",
 ["Color near Death"] = "接近死亡的颜色",
+["None"] = "无",
+["Pause Movement"] = "暂停移动",
+["AutoCarry Mode"] = "自动连招输出模式",
+["Target Lock Current Target"] = "锁定当前目标",
+["Target Lock Selected Target"] = "锁定选定目标",
+["Method 2"] = "方式2",
+["Method 3"] = "方式3",
 ["Color Kill"] = "可以击杀的颜色",
 ["Calc x Auto Attacks"] = "计算平A次数",
 ["Lag-Free-Circles"] = "不影响延迟的线圈",
@@ -2538,8 +2451,12 @@ local tranTable = {
 ["LESS CAST"] = "更少使用技能",
 ["LESS CAST PRIORITY"] = "更少使用技能+优先级",
 ["NEAR MOUSE"] = "离鼠标最近",
+["Priority"] = "优先级",
+["NearMouse"] = "离鼠标附近",
 ["MOST AD"] = "AD最高",
+["MostAD"] = "AD最高",
 ["MOST AP"] = "AP最高",
+["MostAP"] = "AP最高",
 ["Damage Type"] = "伤害类型",
 ["MAGICAL"] = "魔法",
 ["PHYSICAL"] = "物理",
@@ -3164,32 +3081,6 @@ local tranTable = {
 ["Heal Cd's on Aram"] = "在大乱斗模式显示治疗cd",
 ["LordsDecree Cooldown"] = "雷霆领主的法令冷却时间",
 ["Big Fat Hev - Mark IV v. 4.001"] = "胖子意识 v. 4.001",
-["Ralphlol Kindred"] = "Ralphlol:千珏",
-["Use Q gap-close "] = "使用Q接近敌人",
-["In Combat Q Dash Method"] = "在战斗中Q位移的方式",
-["Enable Ultimate"] = "启用大招",
-["Use W in Wave Clear"] = "在清线中使用W",
-["Also use champ Smite"] = "自动使用惩戒",
-["Draw W Duration"] = "显示W持续时间",
-["Draw R Duration"] = "显示R持续时间",
-["Assisted Ultimate Key"] = "辅助大招按键",
-["Malphite"] = "墨菲特",
-["Keybindings are in the Orbwalking Settings menu"] = "按键设置在走砍设置菜单里",
-["Ralphlol's Utility Suite"] = "Ralphlol的工具套件",
-["Missed CS Counter"] = "漏刀计数器",
-["X Position"] = "X轴位置",
-["Y Position"] = "Y轴位置",
-["Text Size"] = "文字大小",
-["Jungler"] = "打野",
-["Draw Enemy Waypoints"] = "显示敌人的路径点",
-["Draw Incoming Enemies"] = "显示即将赶到的敌人",
-["Countdowns"] = " 倒计时",
-["Ward Bush/ Pink Invis"] = "自动插真眼/神谕改造反隐",
-["Key Activation"] = "热键",
-["Max Time to check missing Enemy"] = "检查敌人消失的最大时间",
-["Draw Minions"] = "显示小兵",
-["Recall Positions"] = "回城地点",
-["Print Messages"] = "显示消息",
 
 }
 function translationchk(text)
