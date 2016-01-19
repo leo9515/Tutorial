@@ -1421,9 +1421,9 @@ local tranTable = {
 ["Draw QE Prediction"] =  "畫出QE的預判",
 ----------------神系列瑞茲錘石-----------------------
 ["DeklandAIO: Thresh"] = "神系列合集：錘石",
-["Use Lantern Whilst Hooked"] = "勾中的同時使用燈籠",
-["Use Lantern - Grab Ally"] = "對友軍使用燈籠",
-["Use Lantern - Self"] = "對自己使用燈籠",
+--["Use Lantern Whilst Hooked"] = "勾中的同時使用燈籠",
+--["Use Lantern - Grab Ally"] = "對友軍使用燈籠",
+--["Use Lantern - Self"] = "對自己使用燈籠",
 ["E Mode"] = "E技能模式",
 ["Auto"] = "自動",
 ["Pull"] = "向後拉",
@@ -2326,7 +2326,7 @@ local tranTable = {
 ["Reload Sprites (default J)"] = "重新加載圖片(默認J)",
 ["Enable Scarra Warding Assistance"] = "啟用插眼助手",
 ["Automations"] = "自動",
-["Lantern Grabber"] = "自動撿燈籠",
+--["Lantern Grabber"] = "自動撿燈籠",
 ["Max Radius to trigger"] = "觸發的最大半徑",
 ["Hotkey to trigger"] = "觸發的按鍵",
 ["Allow automation based on health"] = "取決於生命值的自動",
@@ -2413,7 +2413,7 @@ local tranTable = {
 ["Color Stack 1-3"] = "顏色疊加 1-3",
 ["Color Stack 4"] = "顏色疊加 4",
 ["Color Background"] = "顏色背景",
-["[R - Destiny]"] = "[R - 命運]",
+--["[R - Destiny]"] = "[R - 命運]",
 ["Enable Minimap"] = "在小地圖上啟用顯示",
 ["Draw Sprite Panel"] = "顯示控制面板",
 ["Draw Alerter Text"] = "顯示提醒文字",
@@ -2622,7 +2622,7 @@ local tranTable = {
 ["Dragonslayer Vayne - Red"] = "屠龍勇士 薇恩 - 紅色",
 ["Dragonslayer Vayne - Green"] = "屠龍勇士 薇恩 - 綠色",
 ["Dragonslayer Vayne - Blue"] = "屠龍勇士 薇恩 - 藍色",
-["Dragonslayer Vayne - Light Blue"] = "屠龍勇士 薇恩 - 淺藍色",
+--["Dragonslayer Vayne - Light Blue"] = "屠龍勇士 薇恩 - 淺藍色",
 ["SKT T1 Vayne"] = "SKT T1 薇恩",
 ["Arc Vayne"] = "蒼穹之光 薇恩",
 ["Snow Bard"] = "冰雪游神 巴德",
@@ -3053,8 +3053,8 @@ local tranTable = {
 ["Vertical"] = " 垂直的",
 ["Horizontal"] = "水平的",
 ["HudX and HudY dont work for Old one"] = "HUD XY軸位置不會對經典風格生效",
-["[Thresh Lantern]"] = "[錘石的燈籠]",
-["Use Nearest Lantern"] = "撿最近的燈籠",
+--["[Thresh Lantern]"] = "[錘石的燈籠]",
+--["Use Nearest Lantern"] = "撿最近的燈籠",
 ["Auto Use if HP < %"] = "如果生命值小於%自動使用",
 ["[Anti CC]"] = "[反團控]",
 ["Enable AntiCC"] = "啟用反團控",
@@ -3100,6 +3100,7 @@ function translationchk(text)
 end
 function OnLoad()
 	AAAUpdate()
+	PrintLocal("Version for traditional Chinese!")
 	PrintLocal("Loaded successfully! by: leoxp,Have fun!")
 end
 function PrintLocal(text, isError)
