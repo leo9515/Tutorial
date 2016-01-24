@@ -3709,7 +3709,7 @@ local tranTable = {
 ["Totally LeBlanc  -  TargetSelector Modes"] = "绝对妖姬 - 目标选择器模式",
 ["License"] = "许可",
 ["Patch: "] = "版本",
-["Farm"] = "发育"
+["Farm"] = "发育",
 ------------------王者视图------------------
 ["--------- LANGUAGE --------"] = "--------- 语言选择 ---------",
 ["Language"] = "语言",
