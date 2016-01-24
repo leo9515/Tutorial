@@ -1,4 +1,4 @@
-local version = "0.0124"
+local version = "0.01241"
 local Draw = {
 	Width = 374, -- even number or separator lines on params will be off by one
 	Padding = 3,
