@@ -1,4 +1,4 @@
-local version = "0.01241"
+local version = "0.0125"
 local Draw = {
 	Width = 374, -- even number or separator lines on params will be off by one
 	Padding = 3,
@@ -3936,7 +3936,46 @@ local tranTable = {
 ["Color of timers"] = "计时器颜色",
 ["Silenced"] = "沉默",
 ["AutoAttack ranges"] = "平A范围线圈",
-
+--------------------------奇妙德莱文-------------------
+["Fantastik Draven"] = "奇妙德莱文",
+["Combo key(Space)"] = "连招按键(空格)",
+["Farm key(X)"] = "发育按键(X)",
+["Harass key(C)"] = "骚扰按键(C)",
+["Min. % mana for W and E "] = "使用W和E的最小蓝量",
+["Laneclear Settings"] = "清线设置",
+["Use Q in 'Laneclear'"] = "在清线中使用Q",
+["Use W in 'Laneclear'"] = "在清线中使用W",
+["Jungleclear Settings"] = "清野设置",
+["Use Q in 'Jungleclear'"] = "在清野中使用Q",
+["Use W in 'Jungleclear'"] = "在清野中使用W",
+["Draw Killable targets with R"] = "显示R能够击杀的目标",
+["Misc"] = "杂项",
+["KillSteal Settings"] = "抢人头设置",
+["Use Ult KS"] = "使用大招抢人头",
+["Avoid R Overkill"] = "避免",
+["Ult KS range"] = "大招抢人头的范围",
+["Use Ignite KS"] = "使用点燃抢人头",
+["Catch axe if only in mouse range"] = "只接在鼠标范围内的斧头",
+["Farm/Harass"] = "发育/骚扰",
+["Use maximum 2 Axes"] = "使用最多2个斧头",
+["Draw mouse range"] = "显示鼠标范围",
+["Lag Free circle"] = "不影响延迟的线圈",
+["Mouse Range"] = "鼠标范围",
+["Evadeee Integration(If loaded)"] = "Evadeee结合(如果加载)",
+["Don't catch if axe in turret"] = "不要接在塔下的斧头",
+["Auto-Interrupt"] = "自动打断",
+["Info"] = "信息",
+["Anti-Gapclosers"] = "反突进",
+["Baseult settings"] = "基地大招设置",
+["Health Generation prediction"] = "生命值回复预判",
+["Disable R"] = "禁用R",
+["Sensetive Delay(.3 def)"] = "灵敏度延迟",
+["Catch Axes(Z)"] = "接斧头(Z)",
+["Use W to reach far Axes"] = "使用W接比较远的斧头",
+["Draw Debug"] = "显示调试",
+["Enable Permabox(reload)"] = "启用状态显示(需要重新加载)",
+["Left Click target lock"] = "左键单击目标锁定",
+["Orbwalker"] = "走砍",
 }
 function translationchk(text)
     assert(type(text) == "string","<string> expected for text")
