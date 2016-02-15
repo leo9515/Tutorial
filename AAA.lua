@@ -1,4 +1,6 @@
-local version = "0.0215"
+local version = "0.02151"
+local AAAautoupdate = true
+local dumpuntranslated = false
 local Draw = {
 	Width = 374, -- even number or separator lines on params will be off by one
 	Padding = 3,
@@ -32,6 +34,10 @@ local SelectorConfig = nil
 local GameEnemyCount = 0
 class('AAAUpdate')
 function AAAUpdate:__init()
+	if not AAAautoupdate then 
+		PrintLocal("Autoupdate Disabled!Local version:"..version)
+	return
+	end
 	self.updating = false
 	self.updated = false
 	AddDrawCallback(function ()
@@ -407,6 +413,10 @@ function _G.scriptConfig:__init(header, name, parent)
     end
     self.header = header
     self.name = name
+	if(dumpchk(header)) then
+		print("configheader:",header)
+		WriteFile(('["'.. header ..'"]'.. ' = '.. '" ",').."\n", SCRIPT_PATH .. "results.txt","a")
+	end
     self._tsInstances = {}
     self._param = {}
     self._permaShow = {}
@@ -431,6 +441,12 @@ function _G.scriptConfig:addParam(pVar, pText, pType, defaultValue, a, b, c)
     assert(string.find(pVar, "[^%a%d]") == nil, "addParam: pVar should contain only char and number")
     --assert(self[pVar] == nil, "addParam: pVar should be unique, already existing " .. pVar)
     local newParam = { var = pVar, text = pText, pType = pType }
+	if(dumpchk(pText)) then
+		print("param text:",pText)
+		if(pText ~= "") then
+			WriteFile(('["'.. pText ..'"]'.. ' = '.. '" ",').."\n", SCRIPT_PATH .. "results.txt","a")
+		end
+	end
     if pType == SCRIPT_PARAM_ONOFF then
         assert(type(defaultValue) == "boolean", "addParam: wrong argument types (<boolean> expected)")
     elseif pType == SCRIPT_PARAM_COLOR then
@@ -447,6 +463,12 @@ function _G.scriptConfig:addParam(pVar, pText, pType, defaultValue, a, b, c)
         newParam.cursor = 0
     elseif pType == SCRIPT_PARAM_LIST then
         assert(type(defaultValue) == "number" and type(a) == "table", "addParam: wrong argument types (pVar, pText, pType, defaultValue, listTable) expected")
+		for i,v in pairs(a) do
+			if(dumpchk(v)) then
+				print("param list:",v)
+				WriteFile(('["'.. v ..'"]'.. ' = '.. '" ",').."\n", SCRIPT_PATH .. "results.txt","a")
+			end
+        end
         newParam.listTable = a
         newParam.min = 1
         newParam.max = #a
@@ -802,6 +824,10 @@ end
 local tranTable = {
 ["Menu"] = "菜单",
 ["press key for Menu"] = "设定新的菜单按钮...",
+[" "] = " ",
+["-"] = "-",
+["NOW"] = "NOW",
+["SOW"] = "SOW",
 ["Evadeee"] = "躲避",
 ["Enemy Spells"] = "敌人技能",
 ["Evading Spells"] = "躲避技能",
@@ -1134,7 +1160,7 @@ local tranTable = {
 ["Skills"] = "技能",
 ["Items"] = "物品",
 ["Farming"] = "刷兵",
-["Melee"] = "团战",
+["Melee"] = "近战",
 ["Drawing"] = "绘图",
 ["Pets/Clones"] = "宠物/克隆",
 ["Streaming Mode"] = "开关滑动模式",
@@ -3047,7 +3073,7 @@ local tranTable = {
 ["Y Position"] = "Y轴位置",
 ["Text Size"] = "文字大小",
 ["Jungler"] = "打野",
-["Draw Enemy Waypoints"] = "显示敌人的路径点",
+["Draw Enemy Waypoints"] = "显示敌人的行进路线",
 ["Draw Incoming Enemies"] = "显示即将赶到的敌人",
 ["Countdowns"] = " 倒计时",
 ["Ward Bush/ Pink Invis"] = "自动插真眼/神谕改造反隐",
@@ -3081,7 +3107,7 @@ local tranTable = {
 ["Scan Range"] = "扫描范围",
 ["Draw minimap"] = "小地图显示",
 ["Use Danger Sprite"] = "使用危险标志",
-["Show waypoints"] = "显示路径点",
+["Show waypoints"] = "显示行进路线",
 ["Enable Voice System"] = "启用语音系统",
 ["Jax"] = "贾克斯",
 ["[CD Tracker]"] = "[冷却计时器]",
@@ -3725,7 +3751,7 @@ local tranTable = {
 ["Hidden Objects"] = "隐形的单位",
 ["Aggro targets"] = "仇恨的目标",
 ["Side HUD"] = "HUD显示",
-["Waypoints"] = "路径点",
+["Waypoints"] = "行进路线",
 ["Minimap SS"] = "小地图消失显示",
 ["Clone revealer"] = "分身探测器",
 ["Clone Revealer"] = "分身探测器",
@@ -4788,21 +4814,31 @@ local tranTable = {
 ["Prioritize selected target"] = "优先锁定选定的目标",
 ["Ult mode"] = "大招模式",
 ["Move to mouse"]= "移动至鼠标位置",
+["NebelwolfisMoonWalker"] = "Nebelwolfi走砍",
+["Harass Mode"] = "骚扰模式",
+["Mouse over Hero to stop move"] = "英雄在鼠标下时停止移动",
+["Melee Settings"] = "近战设置",
+["Walk/Stick to target"] = "紧跟目标",
+["Sticky radius to target"] = "紧跟目标半径",
+
 }
 function translationchk(text)
     assert(type(text) == "string","<string> expected for text")
     local text2
-    --if(text == "text1") then text2 = "change the text" end
-    --print("find the text:",text,"tranTable:",tranTable[text])
-    --for i ,v in pairs(tranTable) do
     if(tranTable[text] ~= nil) then 
     text2 = tranTable[text] 
-    --text2 = text
     else
     text2 = text
     end
-    --end
     return text2
+end
+function dumpchk(text)
+	if not dumpuntranslated then return false end
+	if (tranTable[text] == nil) then
+		return true
+	else
+		return false
+	end
 end
 function OnLoad()
 	AAAUpdate()
