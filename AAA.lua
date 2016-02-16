@@ -1,4 +1,4 @@
-local version = "0.02161"
+local version = "0.02162"
 local AAAautoupdate = true
 local dumpuntranslated = false
 local Draw = {
@@ -5125,7 +5125,7 @@ local tranTable = {
 ["Combat keys are connected to your SAC:R keys"] = "连招按键和SAC的连招按键绑定",
 }
 function translationchk(text)
-	if not type(text) == "string" then return text
+	if not type(text) == "string" then return text end
     local text2
     if(tranTable[text] ~= nil) then 
     text2 = tranTable[text] 
