@@ -1,4 +1,4 @@
-local version = "0.02151"
+local version = "0.0216"
 local AAAautoupdate = true
 local dumpuntranslated = false
 local Draw = {
@@ -32,6 +32,7 @@ local Global = {
 local GameHeroes = { }
 local SelectorConfig = nil
 local GameEnemyCount = 0
+local dumpdata = { }
 class('AAAUpdate')
 function AAAUpdate:__init()
 	if not AAAautoupdate then 
@@ -415,7 +416,6 @@ function _G.scriptConfig:__init(header, name, parent)
     self.name = name
 	if(dumpchk(header)) then
 		print("configheader:",header)
-		WriteFile(('["'.. header ..'"]'.. ' = '.. '" ",').."\n", SCRIPT_PATH .. "results.txt","a")
 	end
     self._tsInstances = {}
     self._param = {}
@@ -443,9 +443,6 @@ function _G.scriptConfig:addParam(pVar, pText, pType, defaultValue, a, b, c)
     local newParam = { var = pVar, text = pText, pType = pType }
 	if(dumpchk(pText)) then
 		print("param text:",pText)
-		if(pText ~= "") then
-			WriteFile(('["'.. pText ..'"]'.. ' = '.. '" ",').."\n", SCRIPT_PATH .. "results.txt","a")
-		end
 	end
     if pType == SCRIPT_PARAM_ONOFF then
         assert(type(defaultValue) == "boolean", "addParam: wrong argument types (<boolean> expected)")
@@ -466,7 +463,6 @@ function _G.scriptConfig:addParam(pVar, pText, pType, defaultValue, a, b, c)
 		for i,v in pairs(a) do
 			if(dumpchk(v)) then
 				print("param list:",v)
-				WriteFile(('["'.. v ..'"]'.. ' = '.. '" ",').."\n", SCRIPT_PATH .. "results.txt","a")
 			end
         end
         newParam.listTable = a
@@ -770,7 +766,6 @@ function _G.scriptConfig:OnWndMsg()
     end
 end
 
-
 function GetGameHero(target)
     if (type(target) == "string") then
 		for i = 1, #GameHeroes do
@@ -787,6 +782,7 @@ function GetGameHero(target)
         return target
     end
 end
+
 function GetGameHeroIndex(target)
 	if (type(target) == "string") then
 		for i = 1, #GameHeroes do
@@ -801,6 +797,7 @@ function GetGameHeroIndex(target)
         return GetGameHeroIndex(target.charName)
     end
 end
+
 function InitializeGameHeroes()
     if (#GameHeroes == 0) then
         for i = 1, heroManager.iCount do
@@ -819,6 +816,169 @@ function InitializeGameHeroes()
             end
         end
     end
+end
+
+if not _G.HidePermaShow then
+	_G.HidePermaShow = {}
+end
+
+function _G.CustomPermaShow(TextVar, ValueVar, VisibleVar, PermaColorVar, OnColorVar, OffColorVar, IndexVar)
+	if not _G._CPS_Added then
+		if not DrawCustomText then
+			_G.DrawCustomText = _G.DrawText
+			_G.DrawText = function(Arg1, Arg2, Arg3, Arg4, Arg5) _DrawText(Arg1, Arg2, Arg3, Arg4, Arg5) end
+			_G.DrawCustomLine = _G.DrawLine
+			_G.DrawLine = function(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) _DrawLine(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) end
+			OldPermaShowTable, OldPermaShowCount, IsPermaShowStatusOn, PermaShowTable = {}, 0, {}, {}
+			AddDrawCallback(_DrawCustomPermaShow)
+			_G._CPS_Added = true
+		else
+			OldPermaShowTable, OldPermaShowCount, IsPermaShowStatusOn, PermaShowTable = {}, 0, {}, {}
+			AddDrawCallback(_DrawCustomPermaShow)
+			_G._CPS_Added = true
+		end
+	end
+	
+	if(dumpchk(TextVar) or dumpchk(ValueVar)) then
+		print("CustomPermaShow:"..TextVar)
+	end
+
+	if IndexVar == nil then
+		local _CPS_Updated = false
+		for i=1, #PermaShowTable do
+			if PermaShowTable[i]["TextVar"] == TextVar then
+				PermaShowTable[i]["ValueVar"], PermaShowTable[i]["VisibleVar"],_CPS_Updated = ValueVar,VisibleVar,true
+				PermaShowTable[i]["PermaColorVar"],PermaShowTable[i]["OnColorVar"],PermaShowTable[i]["OffColorVar"] = PermaColorVar, OnColorVar, OffColorVar
+			end
+		end
+
+		if not _CPS_Updated then
+			PermaShowTable[#PermaShowTable+1] = {["TextVar"] = TextVar, ["ValueVar"] = ValueVar, ["VisibleVar"] = VisibleVar, ["PermaColorVar"] = PermaColorVar, ["OnColorVar"] = OnColorVar, ["OffColorVar"] = OffColorVar}
+		end
+	else
+		local _CPS_Updated = false
+		for i=1, #PermaShowTable do
+			if PermaShowTable[i]["IndexVar"] == IndexVar then
+				PermaShowTable[i]["ValueVar"], PermaShowTable[i]["VisibleVar"],_CPS_Updated = ValueVar,VisibleVar,true
+				PermaShowTable[i]["PermaColorVar"],PermaShowTable[i]["OnColorVar"],PermaShowTable[i]["OffColorVar"] = PermaColorVar, OnColorVar, OffColorVar
+				PermaShowTable[i]["TextVar"] = TextVar
+			end
+		end
+
+		if not _CPS_Updated then
+			PermaShowTable[#PermaShowTable+1] = {["TextVar"] = TextVar, ["ValueVar"] = ValueVar, ["VisibleVar"] = VisibleVar, ["PermaColorVar"] = PermaColorVar, ["OnColorVar"] = OnColorVar, ["OffColorVar"] = OffColorVar, ["IndexVar"] = IndexVar}
+		end
+	end
+end
+
+function _G._DrawCustomPermaShow()
+	_CPS_Master = GetSave("scriptConfig")["Master"]
+	_CPS_Master.py1 = _CPS_Master.py
+	_CPS_Master.py2 = _CPS_Master.py
+	_CPS_Master.color = { lgrey = 1413167931, grey = 4290427578, green = 1409321728}
+	_CPS_Master.fontSize = WINDOW_H and math.round(WINDOW_H / 72) or 10
+	_CPS_Master.midSize = _CPS_Master.fontSize / 2
+	_CPS_Master.cellSize = _CPS_Master.fontSize + 1
+	_CPS_Master.width = WINDOW_W and math.round(WINDOW_W / 6.4) or 160
+	_CPS_Master.row = _CPS_Master.width * 0.7
+
+	for i = 1, #PermaShowTable do
+		if PermaShowTable[i].ValueVar == true then
+			if PermaShowTable[i].OnColorVar == nil then
+				if PermaShowTable[i].PermaColorVar == nil then
+					ColorVar = _CPS_Master.color.green
+				else
+					ColorVar = PermaShowTable[i].PermaColorVar
+				end
+			else
+				ColorVar = PermaShowTable[i].OnColorVar
+			end
+			TextVar = "      ON"
+		elseif PermaShowTable[i].ValueVar == false then
+			if PermaShowTable[i].OffColorVar == nil then
+				if PermaShowTable[i].PermaColorVar == nil then
+					ColorVar = _CPS_Master.color.lgrey
+				else
+					ColorVar = PermaShowTable[i].PermaColorVar
+				end
+			else
+				ColorVar = PermaShowTable[i].OffColorVar
+			end
+			TextVar = "      OFF"
+		else
+			if PermaShowTable[i].PermaColorVar == nil then
+				ColorVar = _CPS_Master.color.lgrey
+			else
+				ColorVar = PermaShowTable[i].PermaColorVar
+			end
+			TextVar = PermaShowTable[i].ValueVar
+		end
+		if PermaShowTable[i]["VisibleVar"] then
+			if not (_G.HidePermaShow[PermaShowTable[i].TextVar] ~= nil and _G.HidePermaShow[PermaShowTable[i].TextVar] == true) then
+				DrawCustomLine(_CPS_Master.px - 1, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.px + _CPS_Master.row - 1, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.cellSize, _CPS_Master.color.lgrey)
+				DrawCustomText(translationchk(PermaShowTable[i].TextVar), _CPS_Master.fontSize, _CPS_Master.px, _CPS_Master.py1, _CPS_Master.color.grey)
+				DrawCustomLine(_CPS_Master.px + _CPS_Master.row, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.px + _CPS_Master.width + 1, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.cellSize, ColorVar)
+				DrawCustomText(translationchk(TextVar), _CPS_Master.fontSize, _CPS_Master.px + _CPS_Master.row + 1, _CPS_Master.py1, _CPS_Master.color.grey)
+				_CPS_Master.py1 = _CPS_Master.py1 + _CPS_Master.cellSize
+			end
+		end
+	end
+	for i=1,OldPermaShowCount do
+		if IsPermaShowStatusOn[_CPS_Master.py2] == true then
+			ColorVar = _CPS_Master.color.green
+			TextVar = "      ON"
+		elseif IsPermaShowStatusOn[_CPS_Master.py2] == false then
+			ColorVar = _CPS_Master.color.lgrey
+			TextVar = "      OFF"
+		else
+			ColorVar = _CPS_Master.color.lgrey
+			TextVar = IsPermaShowStatusOn[_CPS_Master.py2]
+		end
+		DrawCustomLine(_CPS_Master.px - 1, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.px + _CPS_Master.row - 1, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.cellSize, _CPS_Master.color.lgrey)
+		DrawCustomText(translationchk(OldPermaShowTable[i].Arg1), _CPS_Master.fontSize, _CPS_Master.px, _CPS_Master.py1, _CPS_Master.color.grey)
+		DrawCustomLine(_CPS_Master.px + _CPS_Master.row, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.px + _CPS_Master.width + 1, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.cellSize, (ColorVar))
+		DrawCustomText(translationchk(TextVar), _CPS_Master.fontSize, _CPS_Master.px + _CPS_Master.row + 1, _CPS_Master.py1, _CPS_Master.color.grey)
+		_CPS_Master.py1 = _CPS_Master.py1 + _CPS_Master.cellSize
+		_CPS_Master.py2 = _CPS_Master.py2 + _CPS_Master.cellSize
+	end
+end
+
+function _G._DrawText(Arg1, Arg2, Arg3, Arg4, Arg5)
+	_CPS_Master = GetSave("scriptConfig")["Master"]
+	_CPS_Master.row = (WINDOW_W and math.round(WINDOW_W / 6.4) or 160) * 0.7
+	if Arg3 == _CPS_Master.px then
+		if not (_G.HidePermaShow[Arg1] ~= nil and _G.HidePermaShow[Arg1] == true) then
+			if not OldPermaShowTable[Arg1] then
+				OldPermaShowTable[Arg1] = true
+				OldPermaShowCount = OldPermaShowCount + 1
+				OldPermaShowTable[OldPermaShowCount] = {}
+				OldPermaShowTable[OldPermaShowCount]["Status"] = true
+				OldPermaShowTable[OldPermaShowCount]["Arg1"] = Arg1
+				OldPermaShowTable[OldPermaShowCount]["Arg2"] = Arg2
+				OldPermaShowTable[OldPermaShowCount]["Arg3"] = Arg3
+				OldPermaShowTable[OldPermaShowCount]["Arg4"] = Arg4
+				OldPermaShowTable[OldPermaShowCount]["Arg5"] = Arg5
+			end
+		end
+	elseif Arg3 == (_CPS_Master.px + _CPS_Master.row + 1) then
+		if Arg1 == "      ON" then
+			IsPermaShowStatusOn[Arg4] = true
+		elseif Arg1 == "      OFF" then
+			IsPermaShowStatusOn[Arg4] = false
+		else
+			IsPermaShowStatusOn[Arg4] = Arg1
+		end
+	else
+		DrawCustomText(Arg1, Arg2, Arg3, Arg4, Arg5)
+	end
+end
+
+function _G._DrawLine(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6)
+	_CPS_Master = GetSave("scriptConfig")["Master"]
+	_CPS_Master.row = (WINDOW_W and math.round(WINDOW_W / 6.4) or 160) * 0.7
+	if not (Arg1 == (_CPS_Master.px - 1) or Arg1 == (_CPS_Master.px + _CPS_Master.row)) then
+		DrawCustomLine(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6)
+	end
 end
 
 local tranTable = {
@@ -1108,7 +1268,7 @@ local tranTable = {
 ["Use Youmuu's Ghostblade"] = "使用幽梦之灵",
 ["Use Randuins Omen"] = "使用兰顿之兆",
 ["Use Muramana"] = "使用魔切",
-["Save BotRK for max heal"] = "保留BotRK获得最大治疗",
+["Save BotRK for max heal"] = "保留破败以获得最大治疗",
 ["Use Muramana [Champions]"] = "对英雄使用魔切",
 ["Use Muramana [Minions]"] = "对小兵使用魔切",
 ["Use Tiamat/Hydra to last hit"] = "使用提亚马特或者九头蛇完成最后一击",
@@ -1676,7 +1836,7 @@ local tranTable = {
 ["VPrediction"] = "V预判",
 ["DPrediction"] = "神圣预判",
 ["-- VPrediction Settings --"] = "------ V预判设置 ------",
-["Q Hit Chance"] = "Q的命中机会",
+["Q Hit Chance"] = "Q的命中率",
 ["Medium"] = "中等",
 ["High"] = "高",
 ["-- HPrediction Settings --"] = "------ H预判设置 ------",
@@ -2657,7 +2817,7 @@ local tranTable = {
 ["Draw Attacks"] = "显示攻击",
 ["Draw Tower Insec"] = "显示防御塔Insec",
 ["While Key Pressed"] = "当按键按下时",
-["Enable Streaming Mode (F7)"] = "启用流模式(F7)",
+["Enable Streaming Mode (F7)"] = "启用屏蔽模式(F7)",
 ["General Settings"] = "常规设置",
 ["Auto Level Spells"] = "自动加点",
 ["Disable auto-level for first level"] = "在1级时关闭自动加点",
@@ -4820,7 +4980,149 @@ local tranTable = {
 ["Melee Settings"] = "近战设置",
 ["Walk/Stick to target"] = "紧跟目标",
 ["Sticky radius to target"] = "紧跟目标半径",
+------------------Forbidden Ahri Kassadin Twisted Fate Ryze----------------
+["Challenger Ahri Reborn by Da Vinci"] = "挑战者中单合集 - 阿狸",
+["Ahri - Target Selector Settings"] = "[阿狸] - 目标选择器设置",
+["Ahri - General Settings"] = "[阿狸] - 常规设置",
+["Catch the Q with Movement"] = "移动来调整Q的弹道",
+["Ahri - Combo Settings"] = "[阿狸] - 连招设置",
+["Catch the Q with R"] = "使用R调整Q的弹道",
+["Give Priority to Catch the Q with R"] = "优先使用R调整Q的弹道",
+["Use Ignite If Killable "] = "当可击杀时使用点燃",
+["Ahri - Harass Settings"] = "[阿狸] - 骚扰设置",
+["Ahri - LaneClear Settings"] = "[阿狸] - 清线设置",
+["Use W If Minions >= "] = "当小兵大于等于x时使用W",
+["Ahri - JungleClear Settings"] = "[阿狸] - 清野设置",
+["Ahri - LastHit Settings"] = "[阿狸] - 尾刀设置",
+["Never"] = "从不",
+["Ahri - KillSteal Settings"] = "[阿狸] - 抢人头设置",
+["Ahri - Auto Settings"] = "[阿狸] - 自动设置",
+["Use E To Interrupt"] = "使用E技能打断",
+["Ahri - Draw Settings"] = "[阿狸] - 显示设置",
+["Path to Catch the Q"] = "调整Q弹道的路线",
+["Line for Q Orb"] = "Q技能弹道指示线",
+["Ahri - Keys Settings"] = "[阿狸] - 按键设置",
+["Start with E (Toggle)"] = "连招E起手(开关)",
 
+["Forbidden Kassadin by Da Vinci"] = "挑战者中单合集 - 卡萨丁",
+["Kassadin - Target Selector Settings"] = "[卡萨丁] - 目标选择器设置",
+["Kassadin - General Settings"] = "[卡萨丁] - 常规设置",
+["Kassadin - Combo Settings"] = "[卡萨丁] - 连招设置",
+["Kassadin - Harass Settings"] = "[卡萨丁] - 骚扰设置",
+["Kassadin - LaneClear Settings"] = "[卡萨丁] - 清线设置",
+["Kassadin - JungleClear Settings"] = "[卡萨丁] - 清野设置",
+["Kassadin - LastHit Settings"] = "[卡萨丁] - 尾刀设置",
+["Kassadin - KillSteal Settings"] = "[卡萨丁] - 抢人头设置",
+["Kassadin - Drawing Settings"] = "[卡萨丁] - 显示设置",
+["Kassadin - Keys Settings"] = "[卡萨丁] - 按键设置",
+
+["Diana The Dark Eclipse by Da Vinci"] = "挑战者中单合集 - 戴安娜",
+["Diana - Target Selector Settings"] = "[戴安娜] - 目标选择器设置",
+["Range for Combo"] = "连招使用范围",
+["Diana - General Settings"] = "[戴安娜] - 常规设置",
+["Diana - Combo Settings"] = "[戴安娜] - 连招设置",
+["Use R On Enemies Marked"] = "对标记的敌人使用R",
+["Use QR on Object To GapClose"] = "对目标使用QR以突进敌人",
+["Diana - Harass Settings"] = "[戴安娜] - 骚扰设置",
+["Diana - LaneClear Settings"] = "[戴安娜] - 清线设置",
+["Use E If Hit >="] = "当能命中大于等于x个敌人时使用E",
+["Diana - JungleClear Settings"] = "[戴安娜] - 清野设置",
+["Diana - LastHit Settings"] = "[戴安娜] - 尾刀设置",
+["Diana - KillSteal Settings"] = "[戴安娜] - 抢人头设置",
+["Diana - Auto Settings"] = "[戴安娜] - 自动设置",
+["Diana - Draw Settings"] = "[戴安娜] - 显示设置",
+["Diana - Keys Settings"] = "[戴安娜] - 按键设置",
+
+["Forbidden TwistedFate by Da Vinci"] = "挑战者中单合集 - 崔斯特",
+["TwistedFate - Target Selector Settings"] = "[戴安娜] - 目标选择器设置",
+["Range for Harass"] = "骚扰使用范围",
+["TwistedFate - General Settings"] = "[戴安娜] - 常规设置",
+["Select gold card after R"] = "R技能之后自动切黄牌",
+["TwistedFate - Combo Settings"] = "[戴安娜] - 连招设置",
+["Use Q If Hit >="] = "当能击中大于等于x个单位时使用Q",
+["Use Gold Card"] = "使用黄牌",
+["Use Blue Card If Mana Percent <= "] = "蓝量小于等于x%时切蓝牌",
+["TwistedFate - Harass Settings"] = "[戴安娜] - 骚扰设置",
+["Priorize Farm over Harass"] = "发育优先于骚扰",
+["TwistedFate - LaneClear Settings"] = "[戴安娜] - 清线设置",
+["Use Q If Mana Percent >= "] = "当蓝量大于等于%时使用Q",
+["Use Red Card If Hit >= "] = "当能击中大于等于x个单位时使用红牌",
+["Red Card If Mana Percent >= "] = "如果蓝量高于%使用红牌",
+["Use Blue"] = "使用蓝牌",
+["TwistedFate - JungleClear Settings"] = "[戴安娜] - 清野设置",
+["Use Red"] = "使用红牌",
+["Use Red Card If Mana Percent >= "] = "如果蓝量高于%使用红牌",
+["TwistedFate - LastHit Settings"] = "[戴安娜] - 尾刀设置",
+["TwistedFate - KillSteal Settings"] = "[戴安娜] - 抢人头设置",
+["TwistedFate - Auto Settings"] = "[戴安娜] - 自动设置",
+["Use Gold Card To Interrupt Channelings"] = "使用黄牌打断引导型技能",
+["Use Gold Card To Interrupt GapClosers"] = "使用黄牌打断突进者",
+["TwistedFate - Drawing Settings"] = "[戴安娜] - 显示设置",
+["TwistedFate - Keys Settings"] = "[戴安娜] - 按键设置",
+["Start with Card (Toggle)"] = "切牌起手(开关)",
+["Select Blue Card (Default: F1)"] = "切蓝牌(默认F1)",
+["Select Red Card (Default: F2)"] = "切红牌(默认F2)",
+["Select Gold Card (Default: F3)"] = "切黄牌(默认F3)",
+["Extra WindUpTime"] = "额外后摇时间",
+["Farm Delay"] = "发育延迟时间",
+
+["Wizard by Da Vinci"] = "挑战者上单合集 - 瑞兹",
+["QP Settings"] = "强化Q技能设置",
+["Ryze - Target Selector Settings"] = "[瑞兹] - 目标选择器设置",
+["Ryze - General Settings"] = "[瑞兹] - 常规设置",
+["Ryze - Combo Settings"] = "[瑞兹] - 连招设置",
+["Use Q no Collision"] = "使用Q时不检查碰撞",
+["Ryze - Harass Settings"] = "[瑞兹] - 骚扰设置",
+["Ryze - LaneClear Settings"] = "[瑞兹] - 清线设置",
+["Ryze - JungleClear Settings"] = "[瑞兹] - 清野设置",
+["Ryze - KillSteal Settings"] = "[瑞兹] - 抢人头设置",
+["Ryze - Auto Settings"] = "[瑞兹] - 自动设置",
+["Use W To Interrupt"] = "使用W来打断",
+["Ryze - Draw Settings"] = "[瑞兹] - 显示设置",
+["Ryze - Keys Settings"] = "[瑞兹] - 按键设置",
+["Delay for LastHit (in ms)"] = "尾刀延迟(毫秒)",
+--------------SAC-----------------------
+["Stream Mode"] = "屏蔽模式",
+["Green"] = "绿色",
+["When In Range"] = "当在范围内时",
+["Q (Tumble)"] = "Q(闪避突袭)",
+["Last Hit Only"] = "只在尾刀使用",
+["R (Final Hour)"] = "R(终极时刻)",
+[" Only orbwalk who I attack "] = "只输出我正在攻击的目标",
+[" Only orbwalk my selected target "] = "只输出我选定的目标",
+[" Choose best target in scan range (set below)"] = "在一定范围内选择最佳目标(在下面设定)",
+[" Orbwalk who I attack if possible, otherwise selected target"] = "在可能时只输出我正在攻击的目标,否则攻击选定的目标",
+[" Orbwalk who I attack if possible, otherwise best in scan range"] = "在可能时只输出我正在攻击的目标,否则攻击范围内最佳目标",
+[" Always "] = "总是",
+[" AutoCarry mode "] = "自动连招输出模式",
+[" Any mode"] = "任何模式",
+["  Last Hit Earlier  "] = "提早尾刀",
+["  Last Hit Later  "] = "推迟尾刀",
+["  Cancel Earlier  "] = "提早取消",
+["  Cancel Later  "] = "推迟取消",
+["Server Delay: 100ms"] = "服务器延迟: 100毫秒",
+["Sida's Auto Carry: Vayne"] = "SAC:薇恩",
+["Allowed Condemn Targets"] = "允许眩晕的目标",
+["Toggle Mode (Requires Reload)"] = "开关模式(需要重新加载)",
+["Auto-Condemn"] = "自动E",
+["Auto-Condemn Gap Closers"] = "自动推开突进者",
+["Max Condemn Distance"] = "最大推开距离",
+["Only condemn Reborn target"] = "只推开SAC选定的目标",
+["Condemn Adjustment:"] = "E技能调整:",
+["Disable attacks during ult stealth"] = "在大招隐身的情况下不平A",
+["Wall Detection Method"] = "墙体检测方式",
+["IsWall"] = "IsWall函数",
+["Guess (for when IsWall breaks in BoL)"] = "猜测(当IsWall无法使用时)",
+["              Sida's Auto Carry: Reborn"] = "              Sida走砍",
+["No mode active"] = "无模式",
+["Skill Farm"] = "技能发育",
+["TARGET LOCK"] = "目标锁定",
+["Auto-Condemn"] = "自动E",
+["      Active"] = "    激活",
+["      "] = "    冻结",
+["Move to Mouse"] = "移动至鼠标位置",
+["SAC Detected"] = "检测到SAC",
+["Combat keys are connected to your SAC:R keys"] = "连招按键和SAC的连招按键绑定",
 }
 function translationchk(text)
     assert(type(text) == "string","<string> expected for text")
@@ -4834,7 +5136,14 @@ function translationchk(text)
 end
 function dumpchk(text)
 	if not dumpuntranslated then return false end
+	if text == "" then return false end
 	if (tranTable[text] == nil) then
+		if(dumpdata[text] == nil) then
+		dumpdata[text] = " "
+		WriteFile(('["'.. text ..'"]'.. ' = '.. '" ",').."\n", SCRIPT_PATH .. "results.txt","a")
+		else
+		return false
+		end
 		return true
 	else
 		return false
