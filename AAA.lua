@@ -1,4 +1,4 @@
-local version = "0.02162"
+local version = "0.0219"
 local AAAautoupdate = true
 local dumpuntranslated = false
 local Draw = {
