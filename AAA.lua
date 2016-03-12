@@ -1,4 +1,4 @@
-local version = "0.03121"
+local version = "0.03122"
 local AAAautoupdate = true
 local dumpuntranslated = false
 local Draw = {
@@ -6338,7 +6338,7 @@ function translationchk(text)
     text2 = tranTable[text] 
     else
 	for i,v in pairs(specialtranlist) do
-		if text:find(i) and text then
+		if text and text:find(i) then
 			return text:gsub(i,v)
 		end
 	end
