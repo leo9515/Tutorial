@@ -1,4 +1,4 @@
-local version = "0.03122"
+local version = "0.0313"
 local AAAautoupdate = true
 local dumpuntranslated = false
 local Draw = {
@@ -33,6 +33,7 @@ local GameHeroes = { }
 local SelectorConfig = nil
 local GameEnemyCount = 0
 local dumpdata = { }
+local CPStran = { }
 class('AAAUpdate')
 function AAAUpdate:__init()
 	if not AAAautoupdate then 
@@ -215,7 +216,7 @@ end
 
 local function __SC__DrawInstance(header, selected)
     DrawLine(_SC.draw.x + _SC.draw.width / 2, _SC.draw.y1, _SC.draw.x + _SC.draw.width / 2, _SC.draw.y1 + _SC.draw.cellSize, _SC.draw.width + _SC.draw.border * 2, (selected and _SC.color.red or _SC.color.lgrey))
-    DrawText(translationchk(header), _SC.draw.fontSize, _SC.draw.x, _SC.draw.y1, (selected and _SC.color.ivory or _SC.color.grey))
+    DrawText(header, _SC.draw.fontSize, _SC.draw.x, _SC.draw.y1, (selected and _SC.color.ivory or _SC.color.grey))
     _SC.draw.y1 = _SC.draw.y1 + _SC.draw.cellSize
 end
 
@@ -245,7 +246,7 @@ local function __SC__OnLoad()
                     DrawLine(_SC.draw.x + _SC.draw.width / 2, _SC.draw.y, _SC.draw.x + _SC.draw.width / 2, _SC.draw.y + _SC.draw.height, _SC.draw.width + _SC.draw.border * 2, 1414812756) -- grey
                     _SC.draw.y1 = _SC.draw.y
                     local menuText = _SC._changeKey and not _SC._changeKeyVar and "press key for Menu" or "Menu"
-                    DrawText(translationchk(menuText), _SC.draw.fontSize, _SC.draw.x, _SC.draw.y1, _SC.color.ivory) -- ivory
+                    DrawText(menuText, _SC.draw.fontSize, _SC.draw.x, _SC.draw.y1, _SC.color.ivory) -- ivory
                     DrawText(__SC__txtKey(_SC.menuKey), _SC.draw.fontSize, _SC.draw.x + _SC.draw.width * 0.9, _SC.draw.y1, _SC.color.grey)
                 end
                 _SC.draw.y1 = _SC.draw.y + _SC.draw.cellSize
@@ -270,7 +271,7 @@ local function __SC__OnLoad()
                     for _, varIndex in ipairs(instance._permaShow) do
                         local pVar = instance._param[varIndex].var
                         DrawLine(_SC.pDraw.x - _SC.pDraw.border, y1 + _SC.pDraw.midSize, _SC.pDraw.x + _SC.pDraw.row - _SC.pDraw.border, y1 + _SC.pDraw.midSize, _SC.pDraw.cellSize, _SC.color.lgrey)
-                        DrawText(translationchk(instance._param[varIndex].text), _SC.pDraw.fontSize, _SC.pDraw.x, y1, _SC.color.grey)
+                        DrawText(instance._param[varIndex].text, _SC.pDraw.fontSize, _SC.pDraw.x, y1, _SC.color.grey)
                         if instance._param[varIndex].pType == SCRIPT_PARAM_SLICE or instance._param[varIndex].pType == SCRIPT_PARAM_LIST or instance._param[varIndex].pType == SCRIPT_PARAM_INFO then
                             DrawLine(_SC.pDraw.x + _SC.pDraw.row, y1 + _SC.pDraw.midSize, _SC.pDraw.x + _SC.pDraw.width + _SC.pDraw.border, y1 + _SC.pDraw.midSize, _SC.pDraw.cellSize, _SC.color.lgrey)
                             if instance._param[varIndex].pType == SCRIPT_PARAM_LIST then
@@ -278,11 +279,11 @@ local function __SC__OnLoad()
                                 local maxWidth = (_SC.pDraw.width - _SC.pDraw.row) * 0.8
                                 local textWidth = GetTextArea(text, _SC.pDraw.fontSize).x
                                 if textWidth > maxWidth then
-                                    text = text:sub(1, math.floor(text:len() * maxWidth / textWidth)) .. ".."
+                                    text = text--:sub(1, math.floor(text:len() * maxWidth / textWidth)) .. ".."
                                 end
-                                DrawText(translationchk(text), _SC.pDraw.fontSize, _SC.pDraw.x + _SC.pDraw.row, y1, _SC.color.grey)
+                                DrawText(text, _SC.pDraw.fontSize, _SC.pDraw.x + _SC.pDraw.row + _SC.pDraw.border, y1, _SC.color.grey)
                             else
-                                DrawText(translationchk(tostring(instance[pVar])), _SC.pDraw.fontSize, _SC.pDraw.x + _SC.pDraw.row + _SC.pDraw.border, y1, _SC.color.grey)
+                                DrawText(tostring(instance[pVar]), _SC.pDraw.fontSize, _SC.pDraw.x + _SC.pDraw.row + _SC.pDraw.border, y1, _SC.color.grey)
                             end
                         else
                             DrawLine(_SC.pDraw.x + _SC.pDraw.row, y1 + _SC.pDraw.midSize, _SC.pDraw.x + _SC.pDraw.width + _SC.pDraw.border, y1 + _SC.pDraw.midSize, _SC.pDraw.cellSize, (instance[pVar] and _SC.color.green or _SC.color.lgrey))
@@ -411,7 +412,7 @@ function _G.scriptConfig:__init(header, name, parent)
     else
         self._parent = parent
     end
-    self.header = header
+    self.header = translationchk(header)
     self.name = name
 	if(dumpchk(header)) then
 		print("configheader:",header)
@@ -439,7 +440,7 @@ function _G.scriptConfig:addParam(pVar, pText, pType, defaultValue, a, b, c)
     assert(type(pVar) == "string" and type(pText) == "string" and type(pType) == "number", "addParam: wrong argument types (<string>, <string>, <pType> expected)")
     assert(string.find(pVar, "[^%a%d]") == nil, "addParam: pVar should contain only char and number")
     --assert(self[pVar] == nil, "addParam: pVar should be unique, already existing " .. pVar)
-    local newParam = { var = pVar, text = pText, pType = pType }
+    local newParam = { var = pVar, text = translationchk(pText), pType = pType }
 	if(dumpchk(pText)) then
 		print("param text:",pText)
 	end
@@ -459,12 +460,14 @@ function _G.scriptConfig:addParam(pVar, pText, pType, defaultValue, a, b, c)
         newParam.cursor = 0
     elseif pType == SCRIPT_PARAM_LIST then
         assert(type(defaultValue) == "number" and type(a) == "table", "addParam: wrong argument types (pVar, pText, pType, defaultValue, listTable) expected")
+		local d ={}
 		for i,v in pairs(a) do
+			d[i] = translationchk(v)
 			if(dumpchk(v)) then
 				print("param list:",v)
 			end
         end
-        newParam.listTable = a
+        newParam.listTable = d
         newParam.min = 1
         newParam.max = #a
         newParam.cursor = 0
@@ -586,7 +589,7 @@ function _G.scriptConfig:OnDraw()
     self._y = _SC.draw.y
     DrawLine(self._x + _SC.draw.width / 2, self._y, self._x + _SC.draw.width / 2, self._y + self._height, _SC.draw.width + _SC.draw.border * 2, 1414812756) -- grey
     local menuText = _SC._changeKey and _SC._changeKeyVar and _SC._changeKeyInstance and _SC._changeKeyInstance.name == self.name and "press key for " .. self._param[_SC._changeKeyVar].var or self.header
-    DrawText(translationchk(menuText), _SC.draw.fontSize, self._x, self._y, 4294967280) -- ivory
+    DrawText(menuText, _SC.draw.fontSize, self._x, self._y, 4294967280) -- ivory
     self._y = self._y + _SC.draw.cellSize
     for index, _ in ipairs(self._subInstances) do
         self:_DrawSubInstance(index)
@@ -611,7 +614,7 @@ function _G.scriptConfig:OnDraw()
         -- SELECTED:
         DrawRectangle(self._x + _SC.draw.row3, self._listY + (self[self._param[self._list].var]-1) * _SC.draw.cellSize, maxWidth, _SC.draw.cellSize, _SC.color.green)
         for i, el in pairs(self._param[self._list].listTable) do
-            DrawText(translationchk(el), _SC.draw.fontSize, self._x + _SC.draw.row3, self._listY + (i-1) * _SC.draw.cellSize, 4294967280)
+            DrawText(el, _SC.draw.fontSize, self._x + _SC.draw.row3, self._listY + (i-1) * _SC.draw.cellSize, 4294967280)
         end
     end
 end
@@ -620,7 +623,7 @@ function _G.scriptConfig:_DrawSubInstance(index)
     local pVar = self._subInstances[index].name
     local selected = self._subMenuIndex == index
     DrawLine(self._x - _SC.draw.border, self._y + _SC.draw.midSize, self._x + _SC.draw.width + _SC.draw.border, self._y + _SC.draw.midSize, _SC.draw.cellSize, (selected and _SC.color.red or _SC.color.lgrey))
-    DrawText(translationchk(self._subInstances[index].header), _SC.draw.fontSize, self._x, self._y, (selected and _SC.color.ivory or _SC.color.grey))
+    DrawText(self._subInstances[index].header, _SC.draw.fontSize, self._x, self._y, (selected and _SC.color.ivory or _SC.color.grey))
     DrawText("        >>", _SC.draw.fontSize, self._x + _SC.draw.row3 , self._y, (selected and _SC.color.ivory or _SC.color.grey))
     --_SC._Idraw.y = _SC._Idraw.y + _SC.draw.cellSize
     self._y = self._y + _SC.draw.cellSize
@@ -629,15 +632,15 @@ end
 function _G.scriptConfig:_DrawParam(varIndex)
     local pVar = self._param[varIndex].var
     DrawLine(self._x - _SC.draw.border, self._y + _SC.draw.midSize, self._x + _SC.draw.row3 - _SC.draw.border, self._y + _SC.draw.midSize, _SC.draw.cellSize, _SC.color.lgrey)
-    DrawText(translationchk(self._param[varIndex].text), _SC.draw.fontSize, self._x, self._y, _SC.color.grey)
+    DrawText(self._param[varIndex].text, _SC.draw.fontSize, self._x, self._y, _SC.color.grey)
     if self._param[varIndex].pType == SCRIPT_PARAM_SLICE then
-        DrawText(translationchk(tostring(self[pVar])), _SC.draw.fontSize, self._x + _SC.draw.row2, self._y, _SC.color.grey)
+        DrawText(tostring(self[pVar]), _SC.draw.fontSize, self._x + _SC.draw.row2, self._y, _SC.color.grey)
         DrawLine(self._x + _SC.draw.row3, self._y + _SC.draw.midSize, self._x + _SC.draw.width + _SC.draw.border, self._y + _SC.draw.midSize, _SC.draw.cellSize, _SC.color.lgrey)
         -- cursor
         self._param[varIndex].cursor = (self[pVar] - self._param[varIndex].min) / (self._param[varIndex].max - self._param[varIndex].min) * (_SC.draw.width - _SC.draw.row3)
         DrawLine(self._x + _SC.draw.row3 + self._param[varIndex].cursor - _SC.draw.border, self._y + _SC.draw.midSize, self._x + _SC.draw.row3 + self._param[varIndex].cursor + _SC.draw.border, self._y + _SC.draw.midSize, _SC.draw.cellSize, 4292598640)
     elseif self._param[varIndex].pType == SCRIPT_PARAM_LIST then
-        local text = translationchk(tostring(self._param[varIndex].listTable[self[pVar]]))
+        local text = tostring(self._param[varIndex].listTable[self[pVar]])
         local maxWidth = (_SC.draw.width - _SC.draw.row3) * 0.8
         local textWidth = GetTextArea(text, _SC.draw.fontSize).x
         if textWidth > maxWidth then
@@ -646,7 +649,7 @@ function _G.scriptConfig:_DrawParam(varIndex)
         DrawText(text, _SC.draw.fontSize, self._x + _SC.draw.row3, self._y, _SC.color.grey)
         if self._list and _SC._listInstance then self._listY = self._y + _SC.draw.cellSize end
     elseif self._param[varIndex].pType == SCRIPT_PARAM_INFO then
-        DrawText(translationchk(tostring(self[pVar])), _SC.draw.fontSize, self._x + _SC.draw.row3 + _SC.draw.border, self._y, _SC.color.grey)
+        DrawText(tostring(self[pVar]), _SC.draw.fontSize, self._x + _SC.draw.row3 + _SC.draw.border, self._y, _SC.color.grey)
     elseif self._param[varIndex].pType == SCRIPT_PARAM_COLOR then
         DrawRectangle(self._x + _SC.draw.row3 + _SC.draw.border, self._y, 80, _SC.draw.cellSize, ARGB(self[pVar][1], self[pVar][2], self[pVar][3], self[pVar][4]))
     else
@@ -825,6 +828,17 @@ if not _G.HidePermaShow then
 end
 
 function _G.CustomPermaShow(TextVar, ValueVar, VisibleVar, PermaColorVar, OnColorVar, OffColorVar, IndexVar)
+	
+	if not _CPS_Updated then
+		if CPStran[TextVar] == nil then
+		CPStran[TextVar] = translationchk(TextVar)
+		CPStran[ValueVar] = translationchk(ValueVar)
+		TextVar = translationchk(TextVar)
+		ValueVar = translationchk(ValueVar)
+		end
+	end
+	
+	
 	if not _G._CPS_Added then
 		if not DrawCustomText then
 			_G.DrawCustomText = _G.DrawText
@@ -848,8 +862,8 @@ function _G.CustomPermaShow(TextVar, ValueVar, VisibleVar, PermaColorVar, OnColo
 	if IndexVar == nil then
 		local _CPS_Updated = false
 		for i=1, #PermaShowTable do
-			if PermaShowTable[i]["TextVar"] == TextVar then
-				PermaShowTable[i]["ValueVar"], PermaShowTable[i]["VisibleVar"],_CPS_Updated = ValueVar,VisibleVar,true
+			if PermaShowTable[i]["TextVar"] == CPStran[TextVar] then
+				PermaShowTable[i]["ValueVar"], PermaShowTable[i]["VisibleVar"],_CPS_Updated = CPStran[ValueVar],VisibleVar,true
 				PermaShowTable[i]["PermaColorVar"],PermaShowTable[i]["OnColorVar"],PermaShowTable[i]["OffColorVar"] = PermaColorVar, OnColorVar, OffColorVar
 			end
 		end
@@ -918,9 +932,9 @@ function _G._DrawCustomPermaShow()
 		if PermaShowTable[i]["VisibleVar"] then
 			if not (_G.HidePermaShow[PermaShowTable[i].TextVar] ~= nil and _G.HidePermaShow[PermaShowTable[i].TextVar] == true) then
 				DrawCustomLine(_CPS_Master.px - 1, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.px + _CPS_Master.row - 1, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.cellSize, _CPS_Master.color.lgrey)
-				DrawCustomText(translationchk(PermaShowTable[i].TextVar), _CPS_Master.fontSize, _CPS_Master.px, _CPS_Master.py1, _CPS_Master.color.grey)
+				DrawCustomText(PermaShowTable[i].TextVar, _CPS_Master.fontSize, _CPS_Master.px, _CPS_Master.py1, _CPS_Master.color.grey)
 				DrawCustomLine(_CPS_Master.px + _CPS_Master.row, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.px + _CPS_Master.width + 1, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.cellSize, ColorVar)
-				DrawCustomText(translationchk(TextVar), _CPS_Master.fontSize, _CPS_Master.px + _CPS_Master.row + 1, _CPS_Master.py1, _CPS_Master.color.grey)
+				DrawCustomText(TextVar, _CPS_Master.fontSize, _CPS_Master.px + _CPS_Master.row + 1, _CPS_Master.py1, _CPS_Master.color.grey)
 				_CPS_Master.py1 = _CPS_Master.py1 + _CPS_Master.cellSize
 			end
 		end
@@ -937,9 +951,9 @@ function _G._DrawCustomPermaShow()
 			TextVar = IsPermaShowStatusOn[_CPS_Master.py2]
 		end
 		DrawCustomLine(_CPS_Master.px - 1, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.px + _CPS_Master.row - 1, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.cellSize, _CPS_Master.color.lgrey)
-		DrawCustomText(translationchk(OldPermaShowTable[i].Arg1), _CPS_Master.fontSize, _CPS_Master.px, _CPS_Master.py1, _CPS_Master.color.grey)
+		DrawCustomText(OldPermaShowTable[i].Arg1, _CPS_Master.fontSize, _CPS_Master.px, _CPS_Master.py1, _CPS_Master.color.grey)
 		DrawCustomLine(_CPS_Master.px + _CPS_Master.row, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.px + _CPS_Master.width + 1, _CPS_Master.py1 + _CPS_Master.midSize, _CPS_Master.cellSize, (ColorVar))
-		DrawCustomText(translationchk(TextVar), _CPS_Master.fontSize, _CPS_Master.px + _CPS_Master.row + 1, _CPS_Master.py1, _CPS_Master.color.grey)
+		DrawCustomText(TextVar, _CPS_Master.fontSize, _CPS_Master.px + _CPS_Master.row + 1, _CPS_Master.py1, _CPS_Master.color.grey)
 		_CPS_Master.py1 = _CPS_Master.py1 + _CPS_Master.cellSize
 		_CPS_Master.py2 = _CPS_Master.py2 + _CPS_Master.cellSize
 	end
@@ -961,6 +975,7 @@ function _G._DrawText(Arg1, Arg2, Arg3, Arg4, Arg5)
 				OldPermaShowTable[OldPermaShowCount]["Arg4"] = Arg4
 				OldPermaShowTable[OldPermaShowCount]["Arg5"] = Arg5
 			end
+			
 		end
 	elseif Arg3 == (_CPS_Master.px + _CPS_Master.row + 1) then
 		if Arg1 == "      ON" then
@@ -1057,7 +1072,6 @@ local tranTable = {
 ["Malzahar"] = "Âê¶ûÔú¹þ",
 ["Maokai"] = "Ã¯¿­",
 ["Master Yi"] = "Ò×",
-["MissFortune"] = "¶òÔËÐ¡½ã",
 ["Miss Fortune"] = "¶òÔËÐ¡½ã",
 ["Mordekaise"] = "ÄªµÂ¿­Èö",
 ["Morgana"] = "Äª¸ÊÄÈ",
@@ -6215,6 +6229,7 @@ local specialtranlist = {
 ["Corki"] = "¿âÆæ",
 ["Darius"] = "µÂÀ³¶òË¹",
 ["Diana"] = "´÷°²ÄÈ",
+["DrMundo"] = "ÃÉ¶à",
 ["Mundo"] = "ÃÉ¶à",
 ["Draven"] = "µÂÀ³ÎÄ",
 ["Ekko"] = "°¬¿Ë",
@@ -6263,7 +6278,6 @@ local specialtranlist = {
 ["Malzahar"] = "Âê¶ûÔú¹þ",
 ["Maokai"] = "Ã¯¿­",
 ["Master Yi"] = "Ò×",
-["MissFortune"] = "¶òÔËÐ¡½ã",
 ["Miss Fortune"] = "¶òÔËÐ¡½ã",
 ["Mordekaise"] = "ÄªµÂ¿­Èö",
 ["Morgana"] = "Äª¸ÊÄÈ",
@@ -6365,6 +6379,7 @@ function OnLoad()
 	AAAUpdate()
 	PrintLocal("Loaded successfully! by: leoxp,Have fun!")
 end
+
 function PrintLocal(text, isError)
 	PrintChat("<font color=\"#ff0000\">BoL Config Translater:</font> <font color=\"#"..(isError and "F78183" or "FFFFFF").."\">"..text.."</font>")
 end
