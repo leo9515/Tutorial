@@ -1,4 +1,4 @@
-local version = "0.0314"
+local version = "0.0315"
 local AAAautoupdate = true
 local dumpuntranslated = false
 local Draw = {
@@ -78,10 +78,10 @@ end
 function AAAUpdate:draw()
 	local w, h = WINDOW_W, WINDOW_H
 	if self.updating then
-		DrawTextA("[AAA] Updating", 25, 10,h*0.05,ARGB(255,255,255,255), "left", "center")
+		DrawTextA("[AAA] 升级中", 25, 10,h*0.05,ARGB(255,255,255,255), "left", "center")
 	end
 	if updated then
-		DrawTextA("[AAA] Updated, press 2xF9", 25, 10,h*0.05,ARGB(255,255,255,255), "left", "center")
+		DrawTextA("[AAA] 升级完成, 请按 2xF9", 25, 10,h*0.05,ARGB(255,255,255,255), "left", "center")
 	end
 end
 local _SC = { init = true, initDraw = true, menuKey = 16, useTS = false, menuIndex = -1, instances = {}, _changeKey = false, _changeKeyInstance = false, _sliceInstance = false, _listInstance = false }
@@ -471,6 +471,10 @@ function _G.scriptConfig:addParam(pVar, pText, pType, defaultValue, a, b, c)
         newParam.min = 1
         newParam.max = #a
         newParam.cursor = 0
+	elseif pType == SCRIPT_PARAM_INFO then
+		if defaultValue and type(defaultValue) == "string" then
+			defaultValue = translationchk(defaultValue)
+		end
     end
     self[pVar] = defaultValue
     table.insert(self._param, newParam)
@@ -841,8 +845,8 @@ function _G.CustomPermaShow(TextVar, ValueVar, VisibleVar, PermaColorVar, OnColo
 	
 	if not _G._CPS_Added then
 		if not DrawCustomText then
-			_G.DrawCustomText = _G.DrawText
-			_G.DrawText = function(Arg1, Arg2, Arg3, Arg4, Arg5) _DrawText(Arg1, Arg2, Arg3, Arg4, Arg5) end
+			_G.DrawCustomText = _G.DrawAAAText
+			_G.DrawAAAText = function(Arg1, Arg2, Arg3, Arg4, Arg5) _DrawText(Arg1, Arg2, Arg3, Arg4, Arg5) end
 			_G.DrawCustomLine = _G.DrawLine
 			_G.DrawLine = function(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) _DrawLine(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) end
 			OldPermaShowTable, OldPermaShowCount, IsPermaShowStatusOn, PermaShowTable = {}, 0, {}, {}
@@ -999,12 +1003,14 @@ function _G._DrawLine(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6)
 end
 
 local tranTable = {
+["Patch"] = "版本",
 ["Menu"] = "菜单",
 ["press key for Menu"] = "设定新的菜单按钮...",
 [" "] = " ",
 ["-"] = "-",
 ["NOW"] = "NOW",
 ["SOW"] = "SOW",
+["^ Can cause fps drops"] = "^ 可能会降低fps",
 ["http://botoflegends.com"] = "http://botoflegends.com",
 ["1.401"] = "1.401",
 ["Akali"] = "阿卡丽",
@@ -1075,6 +1081,7 @@ local tranTable = {
 ["Master Yi"] = "易",
 ["MissFortune"] = "厄运小姐",
 ["Miss Fortune"] = "厄运小姐",
+["MonkeyKing"] = "孙悟空",
 ["Mordekaiser"] = "莫德凯撒",
 ["Morgana"] = "莫甘娜",
 ["Nami"] = "娜美",
@@ -6220,9 +6227,182 @@ local tranTable = {
 ["Auto-level bot integration"] = "自动挂机脚本结合",
 ["Enable debugmode"] = "启用调试模式",
 ["(DECREASES PERFORMANCE)"] = "(降低性能)",
-
-
-
+}
+local tranTableB = {
+["Menu"] = "菜单",
+["Chase Mode"] = "追赶模式",
+["Priority Order:"] = "优先级顺序",
+["Speed Buffs"] = "移速增益",
+["Untargetable"] = "无法选定",
+["Turn Around"] = "回头",
+["Ghost"] = "幽灵疾步",
+["Block"] = "召唤物",
+["Jump to enemy"] = "跳向敌军",
+["Ward Jump"] = "摸眼",
+["Dashes & Blinks"] = "位移技能",
+["Movement"] = "移动",
+["Flash"] = "闪现",
+["Jump to ally"] = "跳向友军",
+["Spellshields"] = "法术护盾",
+["Shields"] = "普通护盾",
+["Drag and Drop"] = "按住并拖动这些",
+["these buttons"] = "按钮以调整顺序",
+["to change the order"] = "",
+["Doubleclick to remove!"] = "双击以移除此区域！",
+["Akali"] = "阿卡丽",
+["Alistar"] = "阿利斯塔",
+["Amumu"] = "阿木木",
+["Anivia"] = "艾尼维亚",
+["Annie"] = "安妮",
+["Ashe"] = "艾希",
+["Azir"] = "阿兹尔",
+["Bard"] = "巴德",
+["Blitzcrank"] = "布里茨",
+["Brand"] = "布兰德",
+["Braum"] = "布隆",
+["Caitlyn"] = "凯特琳",
+["Cassiopeia"] = "卡西奥佩娅",
+["Chogath"] = "科加斯",
+["Corki"] = "库奇",
+["Darius"] = "德莱厄斯",
+["Diana"] = "戴安娜",
+["Mundo"] = "蒙多",
+["Draven"] = "德莱文",
+["Ekko"] = "艾克",
+["Elise"] = "伊莉丝",
+["Evelynn"] = "伊芙琳",
+["Ezreal"] = "伊泽瑞尔",
+["Fiddlesticks"] = "费德提克",
+["Fiora"] = "菲奥娜",
+["Fizz"] = "菲兹",
+["Galio"] = "加里奥",
+["Gangplank"] = "普朗克",
+["Garen"] = "盖伦",
+["Gnar"] = "纳尔",
+["Gragas"] = "古拉加斯",
+["Graves"] = "格雷福斯",
+["Hecarim"] = "赫卡里姆",
+["Heimerdinger"] = "黑默丁格",
+["Illaoi"] = "俄洛伊",
+["Irelia"] = "艾瑞莉娅",
+["Janna"] = "迦娜",
+["JarvanIV"] = "皇子",
+["Jax"] = "贾克斯",
+["Jayce"] = "杰斯",
+["Jhin"] = "烬",
+["Jinx"] = "金克丝",
+["Kalista"] = "卡莉斯塔",
+["Karma"] = "卡尔玛",
+["Karthus"] = "卡尔萨斯",
+["Kassadin"] = "卡萨丁",
+["Katarina"] = "卡特琳娜",
+["Kayle"] = "凯尔",
+["Kennen"] = "凯南",
+["Kha'Zix"] = "卡兹克",
+["Khazix"] = "卡兹克",
+["Kindred"] = "千珏",
+["Kog'Maw"] = "克格莫",
+["KogMaw"] = "克格莫",
+["LeBlanc"] = "乐芙兰",
+["LeeSin"] = "盲僧",
+["Lee Sin"] = "盲僧",
+["Leona"] = "蕾欧娜",
+["Lissandra"] = "丽桑卓",
+["Lucian"] = "卢锡安",
+["Lulu"] = "璐璐",
+["Lux"] = "拉克丝",
+["Malphite"] = "墨菲特",
+["Malzahar"] = "玛尔扎哈",
+["Maokai"] = "茂凯",
+["Master Yi"] = "易",
+["MissFortune"] = "厄运小姐",
+["Miss Fortune"] = "厄运小姐",
+["MonkeyKing"] = "孙悟空",
+["Mordekaiser"] = "莫德凯撒",
+["Morgana"] = "莫甘娜",
+["Nami"] = "娜美",
+["Nasus"] = "内瑟斯",
+["Nautilus"] = "诺提勒斯",
+["Nidalee"] = "奈德丽",
+["Nocturne"] = "魔腾",
+["Nunu"] = "努努",
+["Olaf"] = "奥拉夫",
+["Orianna"] = "奥利安娜",
+["Pantheon"] = "潘森",
+["Poppy"] = "波比",
+["Quinn"] = "奎因",
+["Rammus"] = "拉莫斯",
+["Rek'Sai"] = "雷克赛",
+["Renekton"] = "雷克顿",
+["Rengar"] = "雷恩加尔",
+["Riven"] = "锐雯",
+["Rumble"] = "兰博",
+["Ryze"] = "瑞兹",
+["Sejuani"] = "瑟庄妮",
+["Shaco"] = "萨科",
+["Shen"] = "慎",
+["Shyvana"] = "希瓦娜",
+["Singed"] = "辛吉德",
+["Sion"] = "塞恩",
+["Sivir"] = "希维尔",
+["Skarner"] = "斯卡纳",
+["Sona"] = "娑娜",
+["Soraka"] = "索拉卡",
+["Swain"] = "斯维因",
+["Syndra"] = "辛德拉",
+["Talon"] = "泰隆",
+["Tahm Kench"] = "塔姆",
+["Tahm"] = "塔姆",
+["Taric"] = "塔里克",
+["Teemo"] = "提莫",
+["Thresh"] = "锤石",
+["Tristana"] = "崔丝塔娜",
+["Trundle"] = "特朗德尔",
+["Tryndamere"] = "泰达米尔",
+["TwistedFate"] = "崔斯特",
+["Twisted Fate"] = "崔斯特",
+["Twitch"] = "图奇",
+["Udyr"] = "乌迪尔",
+["Urgot"] = "厄加特",
+["Varus"] = "维鲁斯",
+["Vayne"] = "薇恩",
+["Veigar"] = "维迦",
+["Vel'Koz"] = "维克兹",
+["Velkoz"] = "维克兹",
+["Vi"] = "蔚",
+["Viktor"] = "维克托",
+["Vladimir"] = "弗拉基米尔",
+["Volibear"] = "沃利贝尔",
+["Warwick"] = "沃里克",
+["Wukong"] = "孙悟空",
+["Xerath"] = "泽拉斯",
+["XinZhao"] = "赵信",
+["Xin Zhao"] = "赵信",
+["Yasuo"] = "亚索",
+["Yorick"] = "约里克",
+["Zac"] = "扎克",
+["Zed"] = "劫",
+["Ziggs"] = "吉格斯",
+["Zilean"] = "基兰",
+["Zyra"] = "婕拉",
+["Download Status: Connect to Server for VersionInfo"] = "下载状态:连接服务器以获取版本信息",
+["Burst Combo: Off"] = "爆发连招:关闭",
+["Burst Combo: Ready"] = "爆发连招:就绪",
+["Download Status: Downloading VersionInfo"] = "下载状态:获取版本信息中",
+["Waiting R ready..."] = "等待R技能就绪...",
+["Waiting Q ready..."] = "等待Q技能就绪...",
+["Waiting W ready..."] = "等待W技能就绪...",
+["Waiting E ready..."] = "等待E技能就绪...",
+["Missed last hits"] = "漏刀计数",
+["Trinket"] = "饰品",
+["SightWard"] = "监视图腾",
+["VisionWard"] = "真视守卫",
+["sec."] = "秒",
+["SightStone"] = "洞察之石",
+["Burstcombo"] = "爆发连招",
+["CC Combo"] = "控制连招",
+["Unlim"] = "无限",
+["OverDamage"] = "伤害溢出",
 }
 local specialtranlist = {
 ["Evade Revolution"] = "躲避 革命",
@@ -6298,6 +6478,7 @@ local specialtranlist = {
 ["Master Yi"] = "易",
 ["MissFortune"] = "厄运小姐",
 ["Miss Fortune"] = "厄运小姐",
+["MonkeyKing"] = "孙悟空",
 ["Mordekaiser"] = "莫德凯撒",
 ["Morgana"] = "莫甘娜",
 ["Nami"] = "娜美",
@@ -6770,9 +6951,147 @@ function dumpchk(text)
 end
 function OnLoad()
 	AAAUpdate()
+	Readme = DialogBox("Readme")
+	Readme:Add("欢迎使用AAA翻译器！")
+	Readme:Add("")
+	Readme:Add("版本号："..version)
+	Readme:Add("")
+	Readme:Add("捐助支付宝：leoxp9515@hotmail.com")
+	Readme:Add("")
+	Readme:Add("您的支持是我更新的最大动力.")
+	Readme:Add("")
+	Readme:Add("                     by:Given up.")
+	if GetGameTimer() < 250 then
+	Readme:Show()
+	end
+	_G.DrawAAAText = _G.DrawText
+	_G.DrawText = function(Arg1, Arg2, Arg3, Arg4, Arg5) _DrawAAAText(Arg1, Arg2, Arg3, Arg4, Arg5) end
 	PrintLocal("Loaded successfully! by: leoxp,Have fun!")
 end
-
+function _DrawAAAText(Arg1, Arg2, Arg3, Arg4, Arg5)
+    if Arg1==nil then return end
+	if tranTableB[Arg1] == nil then
+		for i,v in pairs(tranTableB) do
+		Arg1 = Arg1:gsub(i,v)
+		end
+	DrawAAAText(Arg1, Arg2, Arg3, Arg4, Arg5)
+	else
+	DrawAAAText(tranTableB[Arg1], Arg2, Arg3, Arg4, Arg5)
+	end
+end
+class("DialogBox")
+function DialogBox:__init(title, width, callback)
+	--self.Title = Format("{1}", title)
+	--self.Info = Format("Version {1} - Tested With LoL {2}", ScriptInfo.Version, ScriptInfo.LeagueVersion)
+	self.Lines = { }
+	self.Buttons = { }
+	self.Width = width or 400
+	self.HWidth = self.Width / 2 - 100
+	self.Height = 92
+	self.x = (WINDOW_W / 5) - self.HWidth -100
+	self.y = (WINDOW_H / 5)
+	self.Visible = false
+	self.CloseHovered = false
+	self.CloseCallback = callback or nil
+	AddTickCallback(function() self:__OnTick() end)
+	AddMsgCallback(function(message, key) self:__OnWndMsg(message, key) end)
+	AddDrawCallback(function() self:__OnDraw() end)
+end
+function DialogBox:__OnTick()
+	if (not self.Visible) then return end
+	if (CursorIsUnder(self.x + self.Width - 50, self.y + 1, 50, 23)) then
+		self.CloseHovered = true
+	else
+		self.CloseHovered = false
+	end
+	for i = 1, #self.Buttons do
+		local button = self.Buttons[i]
+		if (button.x and button.y) then
+			if (CursorIsUnder(button.x, button.y, button.Width, 26)) then
+				button.Hovered = true
+			else
+				button.Hovered = false
+			end
+		end
+	end
+end
+function DialogBox:__OnWndMsg(message, key)
+	if (not self.Visible) then return end
+	if ((key ~= 1) or (message ~= WM_LBUTTONDOWN)) then return end
+	if (self.CloseHovered) then
+		self:Close()
+	else
+		for i = 1, #self.Buttons do
+			local button = self.Buttons[i]
+			if (button.Hovered) then
+				button.Hovered = false
+				if (button.Callback) then
+					button.Callback()
+				end
+				break
+			end
+		end
+	end
+end
+function DialogBox:__OnDraw()
+	if (not self.Visible) then return end
+	local y = self.y + 28
+	--DrawRectangle(self.x - 3, self.y - 3, self.Width + 7, self.Height + 8, 0xFF172021)
+	DrawRectangle(self.x, self.y, self.Width, self.Height + 2, 0xFF998E64)
+	DrawRectangle(self.x + 1, self.y + 1, self.Width -2, self.Height, 0xFF0E1314)
+	DrawRectangle(self.x + 1, self.y + 1, self.Width -2, 24, 0xFF998E64)
+    DrawRectangle(self.x + 1, self.y + 1, self.Width -2, 23, 0xFF0f1b1b)
+    DrawRectangle(self.x + self.Width - 52, self.y + 1, 1, 23, 0xFF998E64)
+    DrawRectangle(self.x + self.Width - 51, self.y + 1, 50, 23, self.CloseHovered and 0xFF998E64 or 0xFF264C48)
+    DrawText("X", 15, self.x + self.Width - 30, self.y + 7, self.CloseHovered and 0xFF172021 or 0xFFA38D63)
+	DrawText(self.Title, 20, self.x + self.HWidth - (GetTextArea(self.Title, 20).x / 2), self.y + 4, 0xFFFEF698)
+	for i = 1, #self.Lines do
+		y = y + 14
+		DrawText(self.Lines[i], 15, self.x + 6, y, 0xFFFEF698)
+	end
+	y = y + 28
+	DrawText(self.Info, 11, self.x + 6, y + 22, 0xFFFEF698)
+	local btnWidth = 0
+	for i = 1, #self.Buttons do
+		local button = self.Buttons[i]
+		btnWidth = btnWidth + button.Width + 6
+		button.x = self.x + self.Width - btnWidth
+		button.y = y + 6
+		DrawRectangle(button.x, button.y, button.Width, 26, button.Hovered and 0xFF998E64 or 0xFF264C48)
+		DrawRectangle(button.x, button.y, 1, 26, 0xFF998E64)
+		DrawRectangle(button.x + button.Width, button.y, 1, 26, 0xFF998E64)
+		DrawRectangle(button.x, button.y, button.Width, 1, 0xFF998E64)
+		DrawRectangle(button.x, button.y + 26, button.Width, 1, 0xFF998E64)
+		DrawText(button.Text, 15, button.x + (button.Width / 2) - (GetTextArea(button.Text, 15).x / 2), button.y + 6, button.Hovered and 0xFF172021 or 0xFFA38D63)
+	end
+end
+function DialogBox:Close()
+	self.Visible = false
+	self.CloseHovered = false
+	for i = 1, #self.Buttons do
+		self.Buttons[i].Hovered = false
+	end
+	if (not self.CloseCallback) then return end
+	self.CloseCallback()
+end
+function DialogBox:Show()
+	self.Visible = true
+end
+function DialogBox:Add(line)
+	local line = line and line:gsub("-t", "        ") or ""
+	table.insert(self.Lines, line)
+	self.Height = self.Height + 14
+end
+function DialogBox:AddButton(text, callback, width)
+	table.insert(self.Buttons, {
+		Text = text,
+		Callback = callback,
+		Hovered = false,
+		Width = width or 100,
+		x = nil,
+		y = nil,
+	})
+end
 function PrintLocal(text, isError)
 	PrintChat("<font color=\"#ff0000\">BoL Config Translater:</font> <font color=\"#"..(isError and "F78183" or "FFFFFF").."\">"..text.."</font>")
 end
