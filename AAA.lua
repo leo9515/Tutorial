@@ -7033,7 +7033,7 @@ function OnLoad()
 	Readme:Add("您的支持是我更新的最大动力.")
 	Readme:Add("")
 	Readme:Add("                     by:Given up.")
-	if GetGameTimer() < 250 then
+	if GetGameTimer() < 100 then
 	Readme:Show()
 	end
 	_G.DrawAAAText = _G.DrawText
