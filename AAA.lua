@@ -1,4 +1,4 @@
-local version = "0.03151"
+local version = "0.0318"
 local AAAautoupdate = true
 local dumpuntranslated = false
 local Draw = {
@@ -1027,6 +1027,8 @@ local tranTable = {
 ["Caitlyn"] = "凯特琳",
 ["Cassiopeia"] = "卡西奥佩娅",
 ["Chogath"] = "科加斯",
+["Cho'gath"] = "科加斯",
+["Cho'Gath"] = "科加斯",
 ["Corki"] = "库奇",
 ["Darius"] = "德莱厄斯",
 ["Diana"] = "戴安娜",
@@ -6228,6 +6230,69 @@ local tranTable = {
 ["Auto-level bot integration"] = "自动挂机脚本结合",
 ["Enable debugmode"] = "启用调试模式",
 ["(DECREASES PERFORMANCE)"] = "(降低性能)",
+---------------Darius NBA Challenger----------------
+["Darius - The NBA Challenger"] = "德莱厄斯 - NBA挑战者",
+["> Fight "] = "> 战斗",
+["Combo "] = "连招",
+["Harass "] = "骚扰",
+["> Farm keys"] = "> 发育按键",
+["Clear "] = "清线",
+["> Other keys"] = "> 其他设置",
+["Auto Walk (Q)"] = "自动外圈(Q)",
+["> Manage your mana:"] = "> 蓝量管理",
+["Check your mana before using a spell"] = "使用技能前检查蓝量",
+["Minimum % of mana to use (Q)"] = "使用Q技能的最小蓝量",
+["Minimum % of mana to use (W)"] = "使用W技能的最小蓝量",
+["Minimum % of mana to use (E)"] = "使用E技能的最小蓝量",
+["Minimum % of mana to use (R)"] = "使用R技能的最小蓝量",
+["> Choose your spells:"] = "> 选择你的技能",
+["(Q) - Use "] = "使用Q",
+["(W) - Use "] = "使用W",
+["(E) - Use "] = "使用E",
+["(R) - Use "] = "使用R",
+["Use Killsteal"] = "启用抢人头",
+["> Drawings"] = "> 显示设置",
+["Stack's Color:"] = "被动显示颜色",
+["Finish Him Color:"] = "终结敌人的颜色",
+["Choose the strength of the circle"] = "",
+["> Draw range of spell:"] = "> 显示技能范围",
+["(Q) - Draw "] = "显示Q",
+["(E) - Draw "] = "显示E",
+["(R) - Draw "] = "显示R",
+["> Draw color of spell:"] = "> 技能线圈颜色",
+["> Healthbar damage"] = "> 血条伤害计算",
+["Draw (Q)+(W)+(E)+(R) damage: "] = "显示Q+W+E+R的伤害",
+["Draw Passiv damage:"] = "显示被动能造成的伤害",
+["Draw (R) damage:"] = "显示R技能造成的伤害",
+["More Soon"] = "更多功能添加中",
+["> HPrediction"] = "> H预判",
+["Hitchance of (E): "] = "E的命中率",
+["Creator:"] = "作者:",
+-----------------FuckoffValor------------
+["FuckOffValor // Key's"] = "FuckOffValor // 按键设置",
+["Combo(SBTW)"] = "连招",
+["FuckOffValor // Combo"] = "FuckOffValor // 连招",
+["Use W for ATSPD"] = "用W开视野",
+["Use W if enemy walks into brush"] = "敌人进草时使用W",
+["Use E only in 1vs1"] = "只在1v1时使用E",
+["Use E on gapclosers"] = "使用E反突进",
+["Auto R after back call(only VIP)"] = "回城自动使用R(仅限VIP)",
+["FuckOffValor // Summoner Spells"] = "FuckOffValor // 召唤师技能",
+["Heal if Health under -> %"] = "生命值低于%时自动使用治疗",
+["Auto ignite"] = "自动点燃",
+["FuckOffValor // Kill Steal"] = "FuckOffValor // 抢人头",
+["FuckOffValor // Miscellaneous"] = "FuckOffValor // 杂项",
+["Choose Prediction"] = "选择预判",
+["Spel Hitchance // VPrediction"] = "技能命中率 // V预判",
+["1=low 2=high 3=slowed 4=stunned/rooted"] = "1=低 2=高 3=减速 4=眩晕/禁锢",
+["Spell Hitchance // HPrediction"] = "技能命中率 //H预判",
+["1=low 2=mid 3=high"] = "1=低 2=中 3=高",
+["Get target from"] = "获取目标",
+["BoL TS"] = "BoL目标选择",
+["SAC:R"] = "SAC目标选择",
+["FuckOffValor // Drawings"] = "FuckOffValor // 显示设置",
+["FuckOffValor // Orbwalker"] = "FuckOffValor // 走砍设置",
+
 }
 local tranTableB = {
 ["Menu"] = "菜单",
@@ -6237,7 +6302,7 @@ local tranTableB = {
 ["Untargetable"] = "无法选定",
 ["Turn Around"] = "回头",
 ["Ghost"] = "幽灵疾步",
-["Block"] = "召唤物",
+["Block"] = "屏蔽",
 ["Jump to enemy"] = "跳向敌军",
 ["Ward Jump"] = "摸眼",
 ["Dashes & Blinks"] = "位移技能",
@@ -6264,6 +6329,8 @@ local tranTableB = {
 ["Caitlyn"] = "凯特琳",
 ["Cassiopeia"] = "卡西奥佩娅",
 ["Chogath"] = "科加斯",
+["Cho'gath"] = "科加斯",
+["Cho'Gath"] = "科加斯",
 ["Corki"] = "库奇",
 ["Darius"] = "德莱厄斯",
 ["Diana"] = "戴安娜",
@@ -6425,6 +6492,8 @@ local specialtranlist = {
 ["Caitlyn"] = "凯特琳",
 ["Cassiopeia"] = "卡西奥佩娅",
 ["Chogath"] = "科加斯",
+["Cho'gath"] = "科加斯",
+["Cho'Gath"] = "科加斯",
 ["Corki"] = "库奇",
 ["Darius"] = "德莱厄斯",
 ["Diana"] = "戴安娜",
@@ -6954,7 +7023,7 @@ function dumpchk(text)
 end
 function OnLoad()
 	AAAUpdate()
-	Readme = DialogBox("Readme")
+	Readme = AAADialogBox("Readme")
 	Readme:Add("欢迎使用AAA翻译器！")
 	Readme:Add("")
 	Readme:Add("版本号："..version)
@@ -6982,8 +7051,8 @@ function _DrawAAAText(Arg1, Arg2, Arg3, Arg4, Arg5)
 	DrawAAAText(tranTableB[Arg1], Arg2, Arg3, Arg4, Arg5)
 	end
 end
-class("DialogBox")
-function DialogBox:__init(title, width, callback)
+class("AAADialogBox")
+function AAADialogBox:__init(title, width, callback)
 	--self.Title = Format("{1}", title)
 	--self.Info = Format("Version {1} - Tested With LoL {2}", ScriptInfo.Version, ScriptInfo.LeagueVersion)
 	self.Lines = { }
@@ -7000,7 +7069,7 @@ function DialogBox:__init(title, width, callback)
 	AddMsgCallback(function(message, key) self:__OnWndMsg(message, key) end)
 	AddDrawCallback(function() self:__OnDraw() end)
 end
-function DialogBox:__OnTick()
+function AAADialogBox:__OnTick()
 	if (not self.Visible) then return end
 	if (CursorIsUnder(self.x + self.Width - 50, self.y + 1, 50, 23)) then
 		self.CloseHovered = true
@@ -7018,7 +7087,7 @@ function DialogBox:__OnTick()
 		end
 	end
 end
-function DialogBox:__OnWndMsg(message, key)
+function AAADialogBox:__OnWndMsg(message, key)
 	if (not self.Visible) then return end
 	if ((key ~= 1) or (message ~= WM_LBUTTONDOWN)) then return end
 	if (self.CloseHovered) then
@@ -7036,7 +7105,7 @@ function DialogBox:__OnWndMsg(message, key)
 		end
 	end
 end
-function DialogBox:__OnDraw()
+function AAADialogBox:__OnDraw()
 	if (not self.Visible) then return end
 	local y = self.y + 28
 	--DrawRectangle(self.x - 3, self.y - 3, self.Width + 7, self.Height + 8, 0xFF172021)
@@ -7068,7 +7137,7 @@ function DialogBox:__OnDraw()
 		DrawText(button.Text, 15, button.x + (button.Width / 2) - (GetTextArea(button.Text, 15).x / 2), button.y + 6, button.Hovered and 0xFF172021 or 0xFFA38D63)
 	end
 end
-function DialogBox:Close()
+function AAADialogBox:Close()
 	self.Visible = false
 	self.CloseHovered = false
 	for i = 1, #self.Buttons do
@@ -7077,15 +7146,15 @@ function DialogBox:Close()
 	if (not self.CloseCallback) then return end
 	self.CloseCallback()
 end
-function DialogBox:Show()
+function AAADialogBox:Show()
 	self.Visible = true
 end
-function DialogBox:Add(line)
+function AAADialogBox:Add(line)
 	local line = line and line:gsub("-t", "        ") or ""
 	table.insert(self.Lines, line)
 	self.Height = self.Height + 14
 end
-function DialogBox:AddButton(text, callback, width)
+function AAADialogBox:AddButton(text, callback, width)
 	table.insert(self.Buttons, {
 		Text = text,
 		Callback = callback,
