@@ -1,6 +1,9 @@
-local version = "0.0318"
+local version = "0.0320"
 local AAAautoupdate = true
 local dumpuntranslated = false
+if FileExist(LIB_PATH .. "AAAlib.lua") then
+	require("AAAlib")
+end
 local Draw = {
 	Width = 374, -- even number or separator lines on params will be off by one
 	Padding = 3,
@@ -1013,6 +1016,7 @@ local tranTable = {
 ["^ Can cause fps drops"] = "^ 可能会降低fps",
 ["http://botoflegends.com"] = "http://botoflegends.com",
 ["1.401"] = "1.401",
+["Aatrox"] = "亚托克斯",
 ["Akali"] = "阿卡丽",
 ["Alistar"] = "阿利斯塔",
 ["Amumu"] = "阿木木",
@@ -6315,6 +6319,7 @@ local tranTableB = {
 ["these buttons"] = "按钮以调整顺序",
 ["to change the order"] = "",
 ["Doubleclick to remove!"] = "双击以移除此区域！",
+["Aatrox"] = "亚托克斯",
 ["Akali"] = "阿卡丽",
 ["Alistar"] = "阿利斯塔",
 ["Amumu"] = "阿木木",
@@ -6478,6 +6483,7 @@ local specialtranlist = {
 ["Big Fat Gosu"] = "胖子合集",
 ["Big Fat Hev -- Mark IV"] = "胖子意识",
 ["PrinceView"] = "王者视图",
+["Aatrox"] = "亚托克斯",
 ["Akali"] = "阿卡丽",
 ["Alistar"] = "阿利斯塔",
 ["Amumu"] = "阿木木",
