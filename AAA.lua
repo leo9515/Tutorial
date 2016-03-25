@@ -1,4 +1,4 @@
-local version = "0.0320"
+local version = "0.0325"
 local AAAautoupdate = true
 local dumpuntranslated = false
 if FileExist(LIB_PATH .. "AAAlib.lua") then
@@ -1176,6 +1176,10 @@ local tranTable = {
 ["Item: Zhonya / Wooglet"] = "中娅沙漏",
 ["Item: Shurelya / Talisman"] = "舒瑞亚的狂想曲/护符",
 ["Dodge/Cross Settings"] = "躲避或穿过技能设置",
+["Ignore units with HP <= than"] = "忽略生命值小于等于%的单位",
+["Dodge under enemy turrets"] = "在敌方防御塔下躲避",
+["Dodge under friendly fountain"] = "在友方的泉水里躲避",
+["Dodge if hero is off-screen"] = "英雄没有在视角里时躲避",
 ["Evading Settings"] = "躲避设置",
 ["Collision Settings"] = "碰撞设置",
 ["Script Interaction (API)"] = "脚本互动（API）",
@@ -1802,6 +1806,8 @@ local tranTable = {
 ["Draw Doomball W Range"] =  "显示魔偶W的范围",
 ["Draw Doomball R Range"] =  "显示魔偶R的范围",
 ----------------------------------------------------------------
+["Prediction Settings"] = "预判设置",
+["Pred Mode: "] = "预判模式",
 ["DeklandAIO: Syndra"] =  "神系列合集：辛德拉",
 ["Set Priority Amumu"] =  "设置木木的优先级",
 ["Use QE Snipe"] =  "使用QE",
@@ -6296,7 +6302,68 @@ local tranTable = {
 ["SAC:R"] = "SAC目标选择",
 ["FuckOffValor // Drawings"] = "FuckOffValor // 显示设置",
 ["FuckOffValor // Orbwalker"] = "FuckOffValor // 走砍设置",
-
+----------ShadowVayne--------------
+["ShadowVayne"] = "影子薇恩",
+["[Condemn]: AntiGapCloser Settings"] = "[恶魔审判]: 反突进设置",
+["[Condemn]: AutoStun Settings"] = "[恶魔审判]: 自动眩晕设置",
+["[Condemn]: AutoStun Targets"] = "[恶魔审判]: 自动眩晕目标",
+["[Condemn]: Interrupt Settings"] = "[恶魔审判]: 打断技能设置",
+["[Tumble]: Settings"] = "[闪避突袭]: 设置",
+["[Misc]: Key Settings"] = "[杂项]: 按键设置",
+["[Misc]: AutoLevelSpells Settings"] = "[杂项]: 自动加点设置",
+["[Misc]: Draw Settings"] = "[杂项]: 显示设置",
+["[BotRK]: Settings"] = "[破败王者之刃]: 设置",
+["[Bilgewater]: Settings"] = "[比尔吉沃特弯刀]: 设置",
+["[Youmuu's]: Settings"] = "[幽梦之灵]: 设置",
+["Basic Key Settings"] = "基本按键设置",
+["Condemn on next BasicAttack:"] = "下次普通攻击后对目标使用E",
+["Key to Walltumble over MidlaneWall:"] = "按键:穿过中路附近的墙",
+["Key to Walltumble over DrakeWall:"] = "按键:穿过小龙附近的墙",
+["Choose the Orbwalker: "] = "选择走砍:",
+["SxOrb"] = "Sx走砍",
+["No Enemy Gapclosers found"] = "没有发现敌方突进者",
+["No Enemies to Stun found"] = "没有发现可眩晕的敌方英雄",
+["No Enemies to Interrupt found"] = "没有发现可打断的敌方英雄",
+["Push Distance"] = "E推开距离",
+["Stun if Enemy lands unter a Tower"] = "如果敌人能被推到防御塔上则使用眩晕",
+["Use Auto-Trinket Bush"] = "自动使用饰品眼探草丛",
+["Stun only Current Target"] = "只眩晕当前目标",
+["E Range Color"] = "E技能线圈颜色",
+["Draw Midlane Walltumble"] = "显示中路附近的穿墙点",
+["Draw Drake Walltumble"] = "显示小龙附近的穿墙点",
+["Use AutoLevelSpells Level 1-3"] = "1-3级自动加点",
+["Use AutoLevelSpells Level 4-18"] = "4-18级自动加点",
+["Level 1-3:"] = "等级1-3",
+["Level 4-18:"] = "等级4-18",
+["You can Click on the 'Q-W-E'"] = "你可以点击Q-W-E",
+["to change the AutoLevelOrder"] = "来改变自动加点顺序",
+["Use BotRK in FightMode"] = "在连招中使用破败",
+["Use BotRK in HarassMode"] = "在骚扰中使用破败",
+["Use BotRK in LaneClear"] = "在清线中使用破败",
+["Use BotRK in LastHit"] = "在尾刀中使用破败",
+["Use BotRK Always"] = "总是使用破败",
+["Max Own Health Percent"] = "最大自身生命值%",
+["Min Enemy Health Percent"] = "最小敌人生命值%",
+["Use BilgeWater Cutlass in FightMode"] = "在连招中使用弯刀",
+["Use BilgeWater Cutlass in HarassMode"] = "在骚扰中使用弯刀",
+["Use BilgeWater Cutlass in LaneClear"] = "在清线中使用弯刀",
+["Use BilgeWater Cutlass in LastHit"] = "在尾刀中使用弯刀",
+["Use BilgeWater Cutlass Always"] = "总是使用比尔吉沃特弯刀",
+["Use Youmuus Ghostblade in FightMode"] = "在连招中使用幽梦",
+["Use Youmuus Ghostblade in HarassMode"] = "在骚扰中使用幽梦",
+["Use Youmuus Ghostblade in LaneClear"] = "在清线中使用幽梦",
+["Use Youmuus Ghostblade in LastHit"] = "在尾刀中使用幽梦",
+["Use Youmuus Ghostblade Always"] = "总是使用幽梦之灵",
+["Use Tumble in FightMode"] = "在连招中使用闪避突袭(Q)",
+["Use Tumble in HarassMode"] = "在骚扰中使用闪避突袭(Q)",
+["Use Tumble in LaneClear"] = "在清线中使用闪避突袭(Q)",
+["Use Tumble in LastHit"] = "在尾刀中使用闪避突袭(Q)",
+["Use Tumble Always"] = "总是使用闪避突袭(Q)",
+["Min Mana to use Q in FightMode"] = "在连招中使用Q的最小蓝量",
+["Min Mana to use Q in HarassMode"] = "在骚扰中使用Q的最小蓝量",
+["Min Mana to use Q in LaneClear"] = "在清线中使用Q的最小蓝量",
+["Min Mana to use Q in LastHit"] = "在尾刀中使用Q的最小蓝量",
+["Default"] = "默认"
 }
 local tranTableB = {
 ["Menu"] = "菜单",
@@ -6477,6 +6544,11 @@ local tranTableB = {
 ["CC Combo"] = "控制连招",
 ["Unlim"] = "无限",
 ["OverDamage"] = "伤害溢出",
+["Evading is disabled"] = "禁用躲避",
+["You are under fountain"] = "你在泉水中",
+["Camera is too far"] = "视角离英雄过远",
+["Turret"] = "防御塔",
+["No Target"] = "无目标",
 }
 local specialtranlist = {
 ["Evade Revolution"] = "躲避 革命",
@@ -7039,7 +7111,7 @@ function OnLoad()
 	Readme:Add("您的支持是我更新的最大动力.")
 	Readme:Add("")
 	Readme:Add("                     by:Given up.")
-	if GetGameTimer() < 100 then
+	if GetGameTimer() < 100 and not FileExist(LIB_PATH .. "AAAlib.lua") then
 	Readme:Show()
 	end
 	_G.DrawAAAText = _G.DrawText
