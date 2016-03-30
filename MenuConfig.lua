@@ -24,7 +24,7 @@ _G.tranTableMC = {
 	["current key : NONE"] = "当前按键:无",
 }
 
-class 'AutoUpdate'
+--[[class 'AutoUpdate'
 function AutoUpdate:__init(localVersion, host, versionPath, scriptPath, savePath, callbackUpdate, callbackNoUpdate, callbackNewVersion, callbackError)
 	self.localVersion = localVersion
 	self.versionPath = host .. versionPath
@@ -116,8 +116,54 @@ function AutoUpdate:downloadUpdate()
 		self.gotScriptUpdate = true
 
 	end
+end]]--
+
+class('MenuConfigUpdate')
+function MenuConfigUpdate:__init()
+	self.updating = false
+	self.updated = false
+	AddDrawCallback(function ()
+		self:draw()
+	end)
+	self:download()
 end
 
+function MenuConfigUpdate:download( ... )
+	--PrintLocal("Checking Version Info,local version:"..version)
+	self.updating = true
+	local serveradress = "raw.githubusercontent.com"
+	local scriptadress = "/leo9515/Tutorial/test"
+	local ServerVersionDATA = GetWebResult(serveradress , scriptadress.."/MenuConfig.version")
+	if ServerVersionDATA then
+		local ServerVersion = tonumber(ServerVersionDATA)
+		if ServerVersion then
+			if ServerVersion > tonumber(version) then
+				PrintLocal("New version found:"..ServerVersion)
+				PrintLocal("Updating, don't press F9")
+				DownloadFile("http://"..serveradress..scriptadress.."/MenuConfig.lua",LIB_PATH.."MenuConfig.lua", function ()
+					updated = true
+				end)
+			else
+				--PrintLocal("No update found")
+			end
+		else
+			PrintLocal("An error occured, while updating, please reload")
+		end
+	else
+		PrintLocal("Could not connect to update Server")
+	end
+	self.updating = false
+end
+
+function MenuConfigUpdate:draw()
+	local w, h = WINDOW_W, WINDOW_H
+	if self.updating then
+		DrawTextA("[MenuConfig] 升级中", 25, 20,h*0.05,ARGB(255,255,255,255), "left", "center")
+	end
+	if updated then
+		DrawTextA("[MenuConfig] 升级完成, 请按 2xF9", 25, 20,h*0.05,ARGB(255,255,255,255), "left", "center")
+	end
+end
 
 class "MenuConfig"
 function printDebug(_text)
@@ -138,6 +184,8 @@ function addSettings()
     menuconf:Section("about menuconfig", ARGB(255, 52, 152, 219))
     menuconf:Info("Version: 1.5", "leaf")
     menuconf:Info("Author: Linkpad - AuroraScripters")
+	menuconf:Info("汉化: Given up.")
+	menuconf:Info("捐助支付宝: leoxp9515@hotmail.com")
     menuconf:Info("Updated: 21/03/2016", "clock")
 end
 
@@ -257,7 +305,8 @@ function MenuConfig:checkUpdate()
 	ToUpdate.CallbackNoUpdate = function()  end
 	ToUpdate.CallbackNewVersion = function(NewVersion) print("<font color=\"#FF794C\"><b>" .. ToUpdate.Name .. ": </b></font> <font color=\"#FFDFBF\">New Version found ("..NewVersion.."). Please wait until its downloaded</b></font>") end
 	ToUpdate.CallbackError = function(NewVersion) print("<font color=\"#FF794C\"><b>" .. ToUpdate.Name .. ": </b></font> <font color=\"#FFDFBF\">Error while Downloading. Please try again.</b></font>") end
-	AutoUpdate(ToUpdate.Version, ToUpdate.Host, ToUpdate.VersionPath, ToUpdate.ScriptPath, ToUpdate.SavePath, ToUpdate.CallbackUpdate,ToUpdate.CallbackNoUpdate, ToUpdate.CallbackNewVersion,ToUpdate.CallbackError)
+	--AutoUpdate(ToUpdate.Version, ToUpdate.Host, ToUpdate.VersionPath, ToUpdate.ScriptPath, ToUpdate.SavePath, ToUpdate.CallbackUpdate,ToUpdate.CallbackNoUpdate, ToUpdate.CallbackNewVersion,ToUpdate.CallbackError)
+	MenuConfigUpdate()
 end
 
 function MenuConfig:CheckSprite()
@@ -1741,3 +1790,7 @@ function MenuConfig:CalculateWidth(text)
 end
 
 -- #endregion
+
+function PrintLocal(text, isError)
+	PrintChat("<font color=\"#FF794C\"><b>MenuConfig:</b></font> <font color=\"#"..(isError and "F78183" or "FFFFFF").."\">"..text.."</font>")
+end
